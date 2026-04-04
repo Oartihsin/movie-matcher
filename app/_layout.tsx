@@ -1,5 +1,5 @@
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -7,18 +7,23 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+import { useAuth } from '../src/hooks/useAuth';
+
 export { ErrorBoundary } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
+  const [loaded, fontError] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const { isAuthenticated, isProfileComplete, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
 
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+    if (fontError) throw fontError;
+  }, [fontError]);
 
   useEffect(() => {
     if (loaded) {
@@ -26,28 +31,37 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  // Auth-based routing
+  useEffect(() => {
+    if (!loaded || loading) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+    const inAppGroup = segments[0] === '(app)';
+
+    if (!isAuthenticated) {
+      // Not logged in → go to login
+      if (!inAuthGroup) {
+        router.replace('/(auth)/login');
+      }
+    } else if (!isProfileComplete) {
+      // Logged in but no profile → go to onboarding
+      if (segments[1] !== 'onboarding') {
+        router.replace('/(auth)/onboarding');
+      }
+    } else {
+      // Fully set up → go to app
+      if (!inAppGroup) {
+        router.replace('/(app)');
+      }
+    }
+  }, [loaded, loading, isAuthenticated, isProfileComplete, segments]);
+
   if (!loaded) return null;
 
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: '#1a1a2e' },
-          headerTintColor: '#fff',
-          contentStyle: { backgroundColor: '#16213e' },
-        }}
-      >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="room/[roomCode]"
-          options={{ title: 'Swipe', headerBackTitle: 'Home' }}
-        />
-        <Stack.Screen
-          name="room/matches"
-          options={{ title: 'Matches', presentation: 'modal' }}
-        />
-      </Stack>
+      <Slot />
     </GestureHandlerRootView>
   );
 
@@ -74,7 +88,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 430,
     overflow: 'hidden',
-    // Subtle shadow to frame the app on desktop
     ...(Platform.OS === 'web'
       ? {
           boxShadow: '0 0 40px rgba(0,0,0,0.5)',

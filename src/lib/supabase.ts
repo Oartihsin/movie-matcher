@@ -16,7 +16,7 @@ export function getSupabase(): SupabaseClient {
       ...(isWeb ? {} : { storage: AsyncStorage }),
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
+      detectSessionInUrl: isWeb,
     },
   });
 

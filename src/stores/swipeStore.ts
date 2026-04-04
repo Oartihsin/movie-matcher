@@ -3,6 +3,7 @@ import type { TMDBMovie } from '../types/tmdb';
 import { fetchPopularMovies } from '../lib/tmdb';
 import { supabase } from '../lib/supabase';
 import { PREFETCH_THRESHOLD } from '../lib/constants';
+import { useMatchStore } from './matchStore';
 
 interface SwipeState {
   movies: TMDBMovie[];
@@ -10,9 +11,11 @@ interface SwipeState {
   currentPage: number;
   isLoading: boolean;
   likedMovieIds: Set<number>;
+  swipedMovieIds: Set<number>;
 
   loadMovies: (page: number) => Promise<void>;
-  recordSwipe: (roomId: string, userId: string, movieId: number, liked: boolean) => Promise<boolean>;
+  loadSwipedIds: (userId: string) => Promise<void>;
+  recordSwipe: (userId: string, movieId: number, liked: boolean) => Promise<boolean>;
   reset: () => void;
 }
 
@@ -22,11 +25,24 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
   currentPage: 1,
   isLoading: false,
   likedMovieIds: new Set(),
+  swipedMovieIds: new Set(),
+
+  loadSwipedIds: async (userId: string) => {
+    const { data } = await supabase.rpc('get_swiped_movie_ids', {
+      p_user_id: userId,
+    });
+    if (data) {
+      set({ swipedMovieIds: new Set(data) });
+    }
+  },
 
   loadMovies: async (page: number) => {
     set({ isLoading: true });
     try {
-      const newMovies = await fetchPopularMovies(page);
+      const allMovies = await fetchPopularMovies(page);
+      const { swipedMovieIds } = get();
+      // Filter out already-swiped movies
+      const newMovies = allMovies.filter((m) => !swipedMovieIds.has(m.id));
       set((state) => ({
         movies: page === 1 ? newMovies : [...state.movies, ...newMovies],
         currentPage: page,
@@ -38,7 +54,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     }
   },
 
-  recordSwipe: async (roomId, userId, movieId, liked) => {
+  recordSwipe: async (userId, movieId, liked) => {
     const state = get();
 
     // Optimistically advance the card
@@ -46,8 +62,9 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     const newLiked = liked
       ? new Set([...state.likedMovieIds, movieId])
       : state.likedMovieIds;
+    const newSwiped = new Set([...state.swipedMovieIds, movieId]);
 
-    set({ currentIndex: nextIndex, likedMovieIds: newLiked });
+    set({ currentIndex: nextIndex, likedMovieIds: newLiked, swipedMovieIds: newSwiped });
 
     // Prefetch next page if nearing the end
     const remaining = state.movies.length - nextIndex;
@@ -55,33 +72,23 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       get().loadMovies(state.currentPage + 1);
     }
 
-    // Record to Supabase
-    const { error } = await supabase.from('swipes').insert({
-      room_id: roomId,
+    // Record to Supabase (user_swipes table — global, no room_id)
+    const { error } = await supabase.from('user_swipes').insert({
       user_id: userId,
       tmdb_movie_id: movieId,
       liked,
     });
 
     if (error) {
-      // Ignore duplicate swipe errors (already swiped in a previous session)
+      // Ignore duplicate swipe errors
       if (error.code === '23505') return false;
       console.error('Swipe insert failed:', error);
       return false;
     }
 
-    // Check if the other user also liked this movie
+    // Check for matches with connections if liked
     if (liked) {
-      const { data } = await supabase
-        .from('swipes')
-        .select('id')
-        .eq('room_id', roomId)
-        .eq('tmdb_movie_id', movieId)
-        .eq('liked', true)
-        .neq('user_id', userId)
-        .maybeSingle();
-
-      return !!data; // true = it's a match!
+      useMatchStore.getState().checkMatchesForSwipe(userId, movieId);
     }
 
     return false;
@@ -94,5 +101,6 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       currentPage: 1,
       isLoading: false,
       likedMovieIds: new Set(),
+      swipedMovieIds: new Set(),
     }),
 }));
