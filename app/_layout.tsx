@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 export { ErrorBoundary } from 'expo-router';
@@ -28,7 +29,7 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   const content = (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -47,7 +48,7 @@ export default function RootLayout() {
           options={{ title: 'Matches', presentation: 'modal' }}
         />
       </Stack>
-    </>
+    </GestureHandlerRootView>
   );
 
   // On web, constrain to mobile-like width for a phone app feel

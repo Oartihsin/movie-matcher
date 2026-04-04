@@ -12,7 +12,7 @@ interface RoomState {
 export const useRoomStore = create<RoomState>((set) => ({
   currentRoom: null,
   partnerJoined: false,
-  setRoom: (room) => set({ currentRoom: room }),
+  setRoom: (room) => set({ currentRoom: room, partnerJoined: false }),
   setPartnerJoined: (joined) => set({ partnerJoined: joined }),
   reset: () => set({ currentRoom: null, partnerJoined: false }),
 }));

@@ -5,21 +5,25 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Swiper from 'react-native-deck-swiper';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 
 import { MovieCard } from '../../src/components/MovieCard';
+import { SwipeableCard } from '../../src/components/SwipeableCard';
 import { MatchModal } from '../../src/components/MatchModal';
+import { MatchToast } from '../../src/components/MatchToast';
 import { useUser } from '../../src/hooks/useUser';
 import { useRoomStore } from '../../src/stores/roomStore';
 import { useSwipeStore } from '../../src/stores/swipeStore';
 import { useMatchStore } from '../../src/stores/matchStore';
 import { supabase } from '../../src/lib/supabase';
 import { fetchMovieDetails } from '../../src/lib/tmdb';
+import { GENRE_MAP } from '../../src/types/tmdb';
 import type { TMDBMovie } from '../../src/types/tmdb';
 
 const { width } = Dimensions.get('window');
@@ -28,7 +32,7 @@ export default function SwipeScreen() {
   const { roomCode } = useLocalSearchParams<{ roomCode: string }>();
   const router = useRouter();
   const { userId } = useUser();
-  const swiperRef = useRef<Swiper<TMDBMovie>>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   const currentRoom = useRoomStore((s) => s.currentRoom);
   const partnerJoined = useRoomStore((s) => s.partnerJoined);
@@ -42,22 +46,45 @@ export default function SwipeScreen() {
   const likedMovieIds = useSwipeStore((s) => s.likedMovieIds);
 
   const matches = useMatchStore((s) => s.matches);
-  const newMatchMovieId = useMatchStore((s) => s.newMatchMovieId);
   const addMatch = useMatchStore((s) => s.addMatch);
   const setNewMatchMovieId = useMatchStore((s) => s.setNewMatchMovieId);
 
   const [matchMovie, setMatchMovie] = useState<TMDBMovie | null>(null);
+  const [toastMovie, setToastMovie] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
+
+  const currentMovie = movies[currentIndex] ?? null;
 
   // Reset stores and load movies when entering a room
   useEffect(() => {
+    setPartnerJoined(false);
     useSwipeStore.getState().reset();
     useMatchStore.getState().reset();
     loadMovies(1);
   }, [roomCode]);
 
-  // Check if partner is already in the room (use RPC to bypass RLS)
+  // Fetch room if not set or if roomCode changed (e.g. deep link or page refresh)
+  useEffect(() => {
+    if (!roomCode) return;
+    // If currentRoom matches the roomCode, no need to fetch
+    if (currentRoom && currentRoom.code === roomCode) return;
+
+    // Clear stale room data
+    useRoomStore.getState().setRoom(null);
+
+    async function fetchRoom() {
+      const { data } = await supabase.rpc('get_room_by_code', {
+        p_code: roomCode,
+      });
+      const room = Array.isArray(data) ? data[0] : data;
+      if (room) {
+        useRoomStore.getState().setRoom(room);
+      }
+    }
+    fetchRoom();
+  }, [roomCode]);
+
+  // Check if partner is already in the room
   useEffect(() => {
     if (!currentRoom) return;
 
@@ -65,14 +92,11 @@ export default function SwipeScreen() {
       const { data: count } = await supabase.rpc('get_room_member_count', {
         p_room_id: currentRoom!.id,
       });
-      console.log('Member count:', count);
       if ((count ?? 0) >= 2) {
         setPartnerJoined(true);
       }
     }
     checkMembers();
-
-    // Also poll every 3 seconds as a fallback for realtime
     const interval = setInterval(checkMembers, 3000);
     return () => clearInterval(interval);
   }, [currentRoom]);
@@ -120,7 +144,8 @@ export default function SwipeScreen() {
           const newSwipe = payload.new;
           if (newSwipe.user_id === userId) return;
           if (newSwipe.liked && likedMovieIds.has(newSwipe.tmdb_movie_id)) {
-            handleMatchFound(newSwipe.tmdb_movie_id);
+            // Partner triggered the match — show a subtle toast, not the full modal
+            handlePartnerMatch(newSwipe.tmdb_movie_id);
           }
         }
       )
@@ -150,6 +175,7 @@ export default function SwipeScreen() {
     loadExistingMatches();
   }, [currentRoom]);
 
+  // Full modal — shown to the user who triggers the match (swipes second)
   const handleMatchFound = useCallback(async (movieId: number) => {
     addMatch(movieId);
     try {
@@ -162,24 +188,40 @@ export default function SwipeScreen() {
     }
   }, []);
 
-  async function handleSwipe(cardIndex: number, liked: boolean) {
-    if (!currentRoom || !userId) return;
-    const movie = movies[cardIndex];
-    if (!movie) return;
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    const isMatch = await recordSwipe(
-      currentRoom.id,
-      userId,
-      movie.id,
-      liked
-    );
-
-    if (isMatch) {
-      handleMatchFound(movie.id);
+  // Subtle toast — shown to the user who swiped first (partner triggered the match)
+  const handlePartnerMatch = useCallback(async (movieId: number) => {
+    addMatch(movieId);
+    try {
+      const movie = await fetchMovieDetails(movieId);
+      setToastMovie(movie.title);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      setToastMovie('a movie');
     }
-  }
+  }, []);
+
+  const handleSwipe = useCallback(
+    async (liked: boolean) => {
+      if (!currentRoom || !userId || !currentMovie) return;
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      const isMatch = await recordSwipe(
+        currentRoom.id,
+        userId,
+        currentMovie.id,
+        liked
+      );
+
+      if (isMatch) {
+        handleMatchFound(currentMovie.id);
+      }
+
+      // Reset scroll to top for next card
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    },
+    [currentRoom, userId, currentMovie, recordSwipe, handleMatchFound]
+  );
 
   async function copyCode() {
     if (roomCode) {
@@ -230,25 +272,9 @@ export default function SwipeScreen() {
   // All movies swiped
   const allSwiped = movies.length > 0 && currentIndex >= movies.length && !isLoading;
 
-  return (
-    <View style={styles.container}>
-      {/* Match count badge */}
-      <TouchableOpacity
-        style={styles.matchBadge}
-        onPress={() =>
-          router.push({
-            pathname: '/room/matches',
-            params: { roomId: currentRoom?.id },
-          })
-        }
-      >
-        <Text style={styles.matchBadgeText}>
-          {matches.length} {matches.length === 1 ? 'Match' : 'Matches'}
-        </Text>
-      </TouchableOpacity>
-
-      {/* All swiped state */}
-      {allSwiped && (
+  if (allSwiped) {
+    return (
+      <View style={styles.container}>
         <View style={styles.emptyState}>
           <Text style={styles.waitingEmoji}>🎉</Text>
           <Text style={styles.waitingTitle}>You've seen them all!</Text>
@@ -267,132 +293,112 @@ export default function SwipeScreen() {
             <Text style={styles.viewMatchesText}>View Matches</Text>
           </TouchableOpacity>
         </View>
-      )}
+      </View>
+    );
+  }
 
-      {/* Card stack - flex:1 fills remaining space between badge and buttons */}
-      {movies.length > 0 && currentIndex < movies.length && (
-        <Swiper
-          key={`swiper-${movies.length}-${currentIndex === 0 ? 'init' : 'active'}`}
-          ref={swiperRef}
-          cards={movies}
-          cardIndex={currentIndex}
-          renderCard={(movie) =>
-            movie ? <MovieCard movie={movie} /> : null
-          }
-          onSwipedRight={(i) => { setShowDetails(false); handleSwipe(i, true); }}
-          onSwipedLeft={(i) => { setShowDetails(false); handleSwipe(i, false); }}
-          backgroundColor="transparent"
-          cardHorizontalMargin={24}
-          cardVerticalMargin={0}
-          marginTop={40}
-          marginBottom={130}
-          stackSize={3}
-          stackScale={6}
-          stackSeparation={14}
-          animateCardOpacity
-          animateOverlayLabelsOpacity
-          disableTopSwipe
-          disableBottomSwipe
-          overlayLabels={{
-            left: {
-              title: 'NOPE',
-              style: {
-                label: {
-                  backgroundColor: 'transparent',
-                  borderColor: '#ff6b6b',
-                  color: '#ff6b6b',
-                  borderWidth: 3,
-                  fontSize: 28,
-                  fontWeight: '800',
-                },
-                wrapper: {
-                  flexDirection: 'column',
-                  alignItems: 'flex-end',
-                  justifyContent: 'flex-start',
-                  marginTop: 30,
-                  marginLeft: -30,
-                },
-              },
-            },
-            right: {
-              title: 'LIKE',
-              style: {
-                label: {
-                  backgroundColor: 'transparent',
-                  borderColor: '#4ecdc4',
-                  color: '#4ecdc4',
-                  borderWidth: 3,
-                  fontSize: 28,
-                  fontWeight: '800',
-                },
-                wrapper: {
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  justifyContent: 'flex-start',
-                  marginTop: 30,
-                  marginLeft: 30,
-                },
-              },
-            },
-          }}
-          containerStyle={styles.swiperContainer}
-          cardStyle={styles.cardStyle}
-        />
-      )}
+  // Get movie info for details section
+  const year = currentMovie?.release_date?.split('-')[0] ?? '';
+  const genres = (currentMovie?.genre_ids ?? [])
+    .slice(0, 3)
+    .map((id) => GENRE_MAP[id])
+    .filter(Boolean);
 
-      {/* Bottom area: details + action buttons */}
-      <View style={styles.bottomArea}>
-        {/* View Details toggle */}
-        {movies[currentIndex] && (
+  return (
+    <View style={styles.container}>
+      <SwipeableCard key={currentIndex} onSwipe={handleSwipe}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Match count badge */}
           <TouchableOpacity
-            style={styles.detailsToggle}
-            onPress={() => setShowDetails(!showDetails)}
+            style={styles.matchBadge}
+            onPress={() =>
+              router.push({
+                pathname: '/room/matches',
+                params: { roomId: currentRoom?.id },
+              })
+            }
           >
-            <Text style={styles.detailsToggleText}>
-              {showDetails ? 'Hide Details' : 'View Details'}
+            <Text style={styles.matchBadgeText}>
+              {matches.length} {matches.length === 1 ? 'Match' : 'Matches'}
             </Text>
-            <Text style={styles.detailsArrow}>{showDetails ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Movie overview */}
-        {showDetails && movies[currentIndex] && (
-          <View style={styles.detailsBox}>
-            <Text style={styles.overviewText}>
-              {movies[currentIndex].overview}
-            </Text>
-          </View>
-        )}
-
-        {/* Action buttons */}
-        <View style={styles.buttons}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.nopeButton]}
-            onPress={() => {
-              setShowDetails(false);
-              swiperRef.current?.swipeLeft();
-            }}
-          >
-            <Text style={styles.buttonEmoji}>✕</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.likeButton]}
-            onPress={() => {
-              setShowDetails(false);
-              swiperRef.current?.swipeRight();
-            }}
-          >
-            <Text style={styles.buttonEmoji}>♥</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Movie poster */}
+          {currentMovie && <MovieCard movie={currentMovie} />}
+
+          {/* Movie info */}
+          {currentMovie && (
+            <View style={styles.infoSection}>
+              <Text style={styles.movieTitle} numberOfLines={2}>
+                {currentMovie.title}
+              </Text>
+
+              <View style={styles.meta}>
+                {year ? <Text style={styles.year}>{year}</Text> : null}
+                <View style={styles.ratingBadge}>
+                  <Text style={styles.ratingIcon}>★</Text>
+                  <Text style={styles.ratingText}>
+                    {currentMovie.vote_average.toFixed(1)}
+                  </Text>
+                </View>
+              </View>
+
+              {genres.length > 0 && (
+                <View style={styles.genres}>
+                  {genres.map((g) => (
+                    <View key={g} style={styles.genreChip}>
+                      <Text style={styles.genreText}>{g}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {currentMovie.overview ? (
+                <Text style={styles.overview}>{currentMovie.overview}</Text>
+              ) : null}
+            </View>
+          )}
+
+          {/* Bottom padding for buttons */}
+          <View style={{ height: 100 }} />
+        </ScrollView>
+      </SwipeableCard>
+
+      {/* Fixed action buttons */}
+      <View style={styles.buttonsContainer}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.nopeButton]}
+          onPress={() => handleSwipe(false)}
+        >
+          <Text style={styles.buttonEmoji}>✕</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, styles.likeButton]}
+          onPress={() => handleSwipe(true)}
+        >
+          <Text style={styles.buttonEmoji}>♥</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Match modal */}
+      {/* Match modal — shown to the user who triggers the match */}
       {matchMovie && (
         <MatchModal
           movie={matchMovie}
           onClose={() => setMatchMovie(null)}
+        />
+      )}
+
+      {/* Toast notification — shown to the partner who swiped first */}
+      {toastMovie && (
+        <MatchToast
+          movieTitle={toastMovie}
+          onDismiss={() => setToastMovie(null)}
         />
       )}
     </View>
@@ -404,73 +410,98 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#16213e',
   },
-  swiperContainer: {
+  scrollView: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  cardStyle: {},
+  scrollContent: {
+    paddingTop: 12,
+    paddingHorizontal: 24,
+  },
   matchBadge: {
     alignSelf: 'flex-end',
-    marginRight: 16,
-    marginTop: 12,
-    marginBottom: 10,
     backgroundColor: '#e94560',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    zIndex: 10,
+    marginBottom: 12,
   },
   matchBadgeText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
   },
-  bottomArea: {
+  infoSection: {
+    marginTop: 20,
+    gap: 12,
+  },
+  movieTitle: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: '800',
+  },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  year: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(233,69,96,0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+  },
+  ratingIcon: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  ratingText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  genres: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  genreChip: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  genreText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  overview: {
+    color: '#c0c0d0',
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  buttonsContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    zIndex: 20,
-  },
-  detailsToggle: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(26,26,46,0.8)',
-    borderRadius: 14,
-    marginBottom: 14,
-  },
-  detailsToggleText: {
-    color: '#e0e0f0',
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  detailsArrow: {
-    color: '#a0a0b0',
-    fontSize: 11,
-  },
-  detailsBox: {
-    backgroundColor: 'rgba(26,26,46,0.95)',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
-  },
-  overviewText: {
-    color: '#c0c0d0',
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  buttons: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 48,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    paddingTop: 12,
+    backgroundColor: 'rgba(22,33,62,0.95)',
   },
   actionButton: {
     width: 60,
