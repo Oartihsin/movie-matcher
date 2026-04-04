@@ -4,6 +4,8 @@ import { getPosterUrl } from '../lib/tmdb';
 import type { TMDBMovie } from '../types/tmdb';
 
 const { width } = Dimensions.get('window');
+const POSTER_WIDTH = Math.min(width * 0.45, 180);
+const POSTER_HEIGHT = POSTER_WIDTH * 1.5;
 
 interface Props {
   movie: TMDBMovie;
@@ -60,8 +62,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   poster: {
-    width: width * 0.5,
-    height: width * 0.5 * 1.5,
+    width: POSTER_WIDTH,
+    height: POSTER_HEIGHT,
     borderRadius: 16,
     marginBottom: 16,
   },

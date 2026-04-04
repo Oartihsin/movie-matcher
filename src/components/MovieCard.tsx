@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { getPosterUrl } from '../lib/tmdb';
@@ -6,8 +6,8 @@ import { GENRE_MAP } from '../types/tmdb';
 import type { TMDBMovie } from '../types/tmdb';
 
 const { width, height } = Dimensions.get('window');
-const CARD_WIDTH = width - 48;
-const CARD_HEIGHT = height - 350;
+const CARD_WIDTH = Math.min(width - 48, 382); // cap at 430 - 48 for web container
+const CARD_HEIGHT = Math.min(height - 350, 580);
 
 interface Props {
   movie: TMDBMovie;
@@ -72,11 +72,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#1a1a2e',
     elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+        }),
+  } as any,
   poster: {
     width: '100%',
     height: '100%',
@@ -100,10 +104,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
+    ...(Platform.OS === 'web'
+      ? { textShadow: '0 1px 4px rgba(0,0,0,0.5)' }
+      : {
+          textShadowColor: 'rgba(0,0,0,0.5)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 4,
+        }),
+  } as any,
   meta: {
     flexDirection: 'row',
     alignItems: 'center',

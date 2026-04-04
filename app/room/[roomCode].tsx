@@ -227,6 +227,9 @@ export default function SwipeScreen() {
     );
   }
 
+  // All movies swiped
+  const allSwiped = movies.length > 0 && currentIndex >= movies.length && !isLoading;
+
   return (
     <View style={styles.container}>
       {/* Match count badge */}
@@ -243,6 +246,28 @@ export default function SwipeScreen() {
           {matches.length} {matches.length === 1 ? 'Match' : 'Matches'}
         </Text>
       </TouchableOpacity>
+
+      {/* All swiped state */}
+      {allSwiped && (
+        <View style={styles.emptyState}>
+          <Text style={styles.waitingEmoji}>🎉</Text>
+          <Text style={styles.waitingTitle}>You've seen them all!</Text>
+          <Text style={styles.waitingSubtitle}>
+            Check your matches or come back later for more
+          </Text>
+          <TouchableOpacity
+            style={styles.viewMatchesButton}
+            onPress={() =>
+              router.push({
+                pathname: '/room/matches',
+                params: { roomId: currentRoom?.id },
+              })
+            }
+          >
+            <Text style={styles.viewMatchesText}>View Matches</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Card stack - flex:1 fills remaining space between badge and buttons */}
       {movies.length > 0 && currentIndex < movies.length && (
@@ -513,5 +538,23 @@ const styles = StyleSheet.create({
     color: '#a0a0b0',
     marginTop: 16,
     fontSize: 16,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  viewMatchesButton: {
+    backgroundColor: '#e94560',
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 30,
+    marginTop: 24,
+  },
+  viewMatchesText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

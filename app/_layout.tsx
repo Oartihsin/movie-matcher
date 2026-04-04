@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { View, StyleSheet, Platform } from 'react-native';
 import 'react-native-reanimated';
 
 export { ErrorBoundary } from 'expo-router';
@@ -26,7 +27,7 @@ export default function RootLayout() {
 
   if (!loaded) return null;
 
-  return (
+  const content = (
     <>
       <StatusBar style="light" />
       <Stack
@@ -48,4 +49,35 @@ export default function RootLayout() {
       </Stack>
     </>
   );
+
+  // On web, constrain to mobile-like width for a phone app feel
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.webOuter}>
+        <View style={styles.webInner}>{content}</View>
+      </View>
+    );
+  }
+
+  return content;
 }
+
+const styles = StyleSheet.create({
+  webOuter: {
+    flex: 1,
+    backgroundColor: '#0d1117',
+    alignItems: 'center',
+  },
+  webInner: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 430,
+    overflow: 'hidden',
+    // Subtle shadow to frame the app on desktop
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 0 40px rgba(0,0,0,0.5)',
+        }
+      : {}),
+  },
+});

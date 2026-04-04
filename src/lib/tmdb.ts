@@ -19,7 +19,12 @@ export async function fetchMovieDetails(movieId: number): Promise<TMDBMovie> {
   if (!res.ok) {
     throw new Error(`TMDB error: ${res.status}`);
   }
-  return res.json();
+  const data = await res.json();
+  // /movie/{id} returns genres:[{id,name}] instead of genre_ids:[number]
+  if (data.genres && !data.genre_ids) {
+    data.genre_ids = data.genres.map((g: { id: number }) => g.id);
+  }
+  return data;
 }
 
 export function getPosterUrl(path: string, size = 'w500'): string {
