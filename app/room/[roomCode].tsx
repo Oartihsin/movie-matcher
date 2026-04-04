@@ -358,7 +358,7 @@ export default function SwipeScreen() {
         {/* Movie overview */}
         {showDetails && movies[currentIndex] && (
           <View style={styles.detailsBox}>
-            <Text style={styles.overviewText} numberOfLines={4}>
+            <Text style={styles.overviewText}>
               {movies[currentIndex].overview}
             </Text>
           </View>
