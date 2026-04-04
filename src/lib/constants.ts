@@ -4,7 +4,5 @@ export const TMDB_API_KEY = process.env.EXPO_PUBLIC_TMDB_API_KEY ?? '';
 export const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
-export const ROOM_CODE_LENGTH = 6;
-export const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const PREFETCH_THRESHOLD = 5;
 export const MOVIES_PER_PAGE = 20;
