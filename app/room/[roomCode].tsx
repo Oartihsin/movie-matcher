@@ -28,6 +28,45 @@ import type { TMDBMovie } from '../../src/types/tmdb';
 
 const { width } = Dimensions.get('window');
 
+const LANGUAGE_MAP: Record<string, string> = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  pt: 'Portuguese',
+  ru: 'Russian',
+  ja: 'Japanese',
+  ko: 'Korean',
+  zh: 'Chinese',
+  hi: 'Hindi',
+  ar: 'Arabic',
+  tr: 'Turkish',
+  pl: 'Polish',
+  nl: 'Dutch',
+  sv: 'Swedish',
+  da: 'Danish',
+  no: 'Norwegian',
+  fi: 'Finnish',
+  th: 'Thai',
+  id: 'Indonesian',
+  ms: 'Malay',
+  vi: 'Vietnamese',
+  tl: 'Filipino',
+  uk: 'Ukrainian',
+  cs: 'Czech',
+  ro: 'Romanian',
+  hu: 'Hungarian',
+  el: 'Greek',
+  he: 'Hebrew',
+  bn: 'Bengali',
+  ta: 'Tamil',
+  te: 'Telugu',
+  ml: 'Malayalam',
+  kn: 'Kannada',
+  cn: 'Cantonese',
+};
+
 export default function SwipeScreen() {
   const { roomCode } = useLocalSearchParams<{ roomCode: string }>();
   const router = useRouter();
@@ -299,6 +338,8 @@ export default function SwipeScreen() {
 
   // Get movie info for details section
   const year = currentMovie?.release_date?.split('-')[0] ?? '';
+  const langCode = currentMovie?.original_language ?? '';
+  const lang = LANGUAGE_MAP[langCode] ?? langCode.toUpperCase();
   const genres = (currentMovie?.genre_ids ?? [])
     .slice(0, 3)
     .map((id) => GENRE_MAP[id])
@@ -346,6 +387,11 @@ export default function SwipeScreen() {
                     {currentMovie.vote_average.toFixed(1)}
                   </Text>
                 </View>
+                {lang ? (
+                  <View style={styles.langBadge}>
+                    <Text style={styles.langText}>{lang}</Text>
+                  </View>
+                ) : null}
               </View>
 
               {genres.length > 0 && (
@@ -448,6 +494,17 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 15,
     fontWeight: '500',
+  },
+  langBadge: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  langText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   ratingBadge: {
     flexDirection: 'row',
