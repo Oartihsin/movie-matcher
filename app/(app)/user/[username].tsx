@@ -73,8 +73,8 @@ export default function PublicProfileScreen() {
   async function handleAccept() {
     if (!connection) return;
     setActionLoading(true);
-    await respondToRequest(connection.id, 'accepted');
-    setActionResult('Connected!');
+    const result = await respondToRequest(connection.id, 'accepted');
+    setActionResult(result.error ?? 'Connected!');
     setActionLoading(false);
   }
 
@@ -172,7 +172,14 @@ export default function PublicProfileScreen() {
           )}
 
           {actionResult && (
-            <Text style={styles.actionResultText}>{actionResult}</Text>
+            <Text style={[
+              styles.actionResultText,
+              actionResult === 'Connected!' || actionResult === 'Request sent!'
+                ? styles.actionResultSuccess
+                : styles.actionResultError,
+            ]}>
+              {actionResult}
+            </Text>
           )}
         </View>
       )}
@@ -310,9 +317,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actionResultText: {
-    color: '#4ecdc4',
     fontSize: 14,
     marginTop: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  actionResultSuccess: {
+    color: '#4ecdc4',
+  },
+  actionResultError: {
+    color: '#ff6b6b',
   },
   editButton: {
     alignSelf: 'center',

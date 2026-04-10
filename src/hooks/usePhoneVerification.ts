@@ -6,15 +6,24 @@ export function usePhoneVerification() {
   const [error, setError] = useState<string | null>(null);
   const [codeSent, setCodeSent] = useState(false);
 
+  function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(msg)), ms)
+      ),
+    ]);
+  }
+
   async function sendOTP(phone: string) {
     setLoading(true);
     setError(null);
     try {
-      // Use updateUser to add phone to existing authenticated user
-      // This sends an OTP to the phone number
-      const { error: otpError } = await supabase.auth.updateUser({
-        phone,
-      });
+      const { error: otpError } = await withTimeout(
+        supabase.auth.updateUser({ phone }),
+        10000,
+        'Request timed out. Check your connection.'
+      );
       if (otpError) throw otpError;
       setCodeSent(true);
     } catch (err: any) {
@@ -28,11 +37,11 @@ export function usePhoneVerification() {
     setLoading(true);
     setError(null);
     try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone,
-        token,
-        type: 'phone_change',
-      });
+      const { error: verifyError } = await withTimeout(
+        supabase.auth.verifyOtp({ phone, token, type: 'phone_change' }),
+        10000,
+        'Request timed out. Check your connection.'
+      );
       if (verifyError) throw verifyError;
       return true;
     } catch (err: any) {

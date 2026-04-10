@@ -14,6 +14,7 @@ interface MatchState {
   matchCounts: MatchCounts;
   currentMatches: MatchedMovie[];
   isLoading: boolean;
+  error: string | null;
   recentMatchMovieId: number | null;
 
   fetchMatchCounts: () => Promise<void>;
@@ -27,6 +28,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
   matchCounts: {},
   currentMatches: [],
   isLoading: false,
+  error: null,
   recentMatchMovieId: null,
 
   fetchMatchCounts: async () => {
@@ -44,16 +46,16 @@ export const useMatchStore = create<MatchState>((set, get) => ({
   },
 
   fetchMatchesForConnection: async (connectionId: string) => {
-    set({ isLoading: true });
+    set({ isLoading: true, error: null });
     try {
       const { data, error } = await supabase.rpc('get_matches_for_connection', {
         p_connection_id: connectionId,
       });
       if (error) throw error;
       set({ currentMatches: data ?? [], isLoading: false });
-    } catch (err) {
-      console.error('Failed to fetch matches:', err);
-      set({ isLoading: false });
+    } catch (err: any) {
+      console.warn('Failed to fetch matches:', err);
+      set({ isLoading: false, error: err?.message ?? 'Failed to load matches' });
     }
   },
 
@@ -83,6 +85,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       matchCounts: {},
       currentMatches: [],
       isLoading: false,
+      error: null,
       recentMatchMovieId: null,
     }),
 }));

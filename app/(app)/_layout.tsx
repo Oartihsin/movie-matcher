@@ -35,11 +35,11 @@ export default function AppLayout() {
     >
       <Stack.Screen
         name="index"
-        options={{ title: 'Movie Matcher', headerShown: false }}
+        options={{ title: 'Home', headerShown: false }}
       />
       <Stack.Screen
         name="profile"
-        options={{ title: 'Profile', presentation: 'modal' }}
+        options={{ title: 'Profile' }}
       />
       <Stack.Screen
         name="connections/index"

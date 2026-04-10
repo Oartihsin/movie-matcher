@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -45,8 +45,11 @@ export default function HomeSwipeScreen() {
   const movies = useSwipeStore((s) => s.movies);
   const currentIndex = useSwipeStore((s) => s.currentIndex);
   const isLoading = useSwipeStore((s) => s.isLoading);
+  const loadError = useSwipeStore((s) => s.loadError);
   const loadMovies = useSwipeStore((s) => s.loadMovies);
   const recordSwipe = useSwipeStore((s) => s.recordSwipe);
+
+  const [swipeError, setSwipeError] = useState<string | null>(null);
 
   const pendingCount = useConnectionStore((s) => s.pendingCount);
   const fetchPendingCount = useConnectionStore((s) => s.fetchPendingCount);
@@ -64,10 +67,15 @@ export default function HomeSwipeScreen() {
     ? movies.find((m) => m.id === recentMatchMovieId)
     : null;
 
-  // Load movies and pending count on mount
+  const setPreferences = useSwipeStore((s) => s.setPreferences);
+
+  // Load movies with user preferences on mount
   useEffect(() => {
+    const genres = profile?.preferred_genres ?? [];
+    const languages = profile?.preferred_languages ?? [];
     useSwipeStore.getState().reset();
-    loadMovies(1);
+    setPreferences(genres, languages);
+    loadMovies(0, genres, languages);
     fetchPendingCount();
   }, []);
 
@@ -77,7 +85,12 @@ export default function HomeSwipeScreen() {
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      await recordSwipe(user.id, currentMovie.id, liked);
+      const success = await recordSwipe(user.id, currentMovie.id, liked);
+      if (!success && liked) {
+        // Show brief error — swipe advanced optimistically but failed to save
+        setSwipeError('Could not save swipe — check your connection');
+        setTimeout(() => setSwipeError(null), 3000);
+      }
 
       // Reset scroll to top for next card
       scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -91,6 +104,30 @@ export default function HomeSwipeScreen() {
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#e94560" />
         <Text style={styles.loadingText}>Loading movies...</Text>
+      </View>
+    );
+  }
+
+  // Failed to load any movies
+  if (movies.length === 0 && loadError) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyEmoji}>⚠️</Text>
+          <Text style={styles.emptyTitle}>Couldn't load movies</Text>
+          <Text style={styles.emptySubtitle}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              const genres = profile?.preferred_genres ?? [];
+              const languages = profile?.preferred_languages ?? [];
+              useSwipeStore.getState().reset();
+              loadMovies(0, genres, languages);
+            }}
+          >
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -127,17 +164,6 @@ export default function HomeSwipeScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerButton}
-          onPress={() => router.push('/(app)/profile')}
-        >
-          <Text style={styles.headerButtonText}>
-            {profile?.display_name?.[0]?.toUpperCase() ?? '?'}
-          </Text>
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Movie Matcher</Text>
-
-        <TouchableOpacity
-          style={styles.headerButton}
           onPress={() => router.push('/(app)/connections')}
         >
           <Text style={styles.headerIcon}>👥</Text>
@@ -148,6 +174,17 @@ export default function HomeSwipeScreen() {
               </Text>
             </View>
           )}
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>Home</Text>
+
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => router.push('/(app)/profile')}
+        >
+          <Text style={styles.headerButtonText}>
+            {profile?.display_name?.[0]?.toUpperCase() ?? '?'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -231,6 +268,13 @@ export default function HomeSwipeScreen() {
           movieTitle={matchedMovie?.title ?? 'a movie'}
           onDismiss={() => setRecentMatch(null)}
         />
+      )}
+
+      {/* Swipe save error toast */}
+      {swipeError && (
+        <View style={styles.swipeErrorToast}>
+          <Text style={styles.swipeErrorText}>{swipeError}</Text>
+        </View>
       )}
     </View>
   );
@@ -424,5 +468,35 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 16,
     color: '#a0a0b0',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#e94560',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 30,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  swipeErrorToast: {
+    position: 'absolute',
+    bottom: 110,
+    left: 24,
+    right: 24,
+    backgroundColor: 'rgba(255,107,107,0.95)',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  swipeErrorText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

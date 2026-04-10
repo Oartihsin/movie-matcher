@@ -6,6 +6,7 @@ interface ConnectionState {
   connections: Connection[];
   pendingCount: number;
   isLoading: boolean;
+  loadError: string | null;
 
   fetchConnections: () => Promise<void>;
   fetchPendingCount: () => Promise<void>;
@@ -18,16 +19,16 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   connections: [],
   pendingCount: 0,
   isLoading: false,
+  loadError: null,
 
   fetchConnections: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, loadError: null });
     try {
       const { data, error } = await supabase.rpc('get_connections_for_user');
       if (error) throw error;
       set({ connections: data ?? [], isLoading: false });
-    } catch (err) {
-      console.error('Failed to fetch connections:', err);
-      set({ isLoading: false });
+    } catch (err: any) {
+      set({ isLoading: false, loadError: err?.message ?? 'Failed to load connections' });
     }
   },
 
@@ -80,5 +81,6 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       connections: [],
       pendingCount: 0,
       isLoading: false,
+      loadError: null,
     }),
 }));

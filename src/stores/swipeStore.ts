@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { TMDBMovie } from '../types/tmdb';
-import { fetchPopularMovies } from '../lib/tmdb';
+import { fetchFeedBatch } from '../lib/tmdb';
 import { supabase } from '../lib/supabase';
 import { PREFETCH_THRESHOLD } from '../lib/constants';
 import { useMatchStore } from './matchStore';
@@ -8,12 +8,16 @@ import { useMatchStore } from './matchStore';
 interface SwipeState {
   movies: TMDBMovie[];
   currentIndex: number;
-  currentPage: number;
+  feedCycle: number;
   isLoading: boolean;
+  loadError: string | null;
   likedMovieIds: Set<number>;
   swipedMovieIds: Set<number>;
+  preferredGenres: number[];
+  preferredLanguages: string[];
 
-  loadMovies: (page: number) => Promise<void>;
+  loadMovies: (cycle?: number, genreIds?: number[], languages?: string[]) => Promise<void>;
+  setPreferences: (genreIds: number[], languages: string[]) => void;
   loadSwipedIds: (userId: string) => Promise<void>;
   recordSwipe: (userId: string, movieId: number, liked: boolean) => Promise<boolean>;
   reset: () => void;
@@ -22,10 +26,17 @@ interface SwipeState {
 export const useSwipeStore = create<SwipeState>((set, get) => ({
   movies: [],
   currentIndex: 0,
-  currentPage: 1,
+  feedCycle: 0,
   isLoading: false,
+  loadError: null,
   likedMovieIds: new Set(),
   swipedMovieIds: new Set(),
+  preferredGenres: [],
+  preferredLanguages: [],
+
+  setPreferences: (genreIds, languages) => {
+    set({ preferredGenres: genreIds, preferredLanguages: languages });
+  },
 
   loadSwipedIds: async (userId: string) => {
     const { data } = await supabase.rpc('get_swiped_movie_ids', {
@@ -36,21 +47,28 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     }
   },
 
-  loadMovies: async (page: number) => {
-    set({ isLoading: true });
+  loadMovies: async (cycle, genreIds, languages) => {
+    set({ isLoading: true, loadError: null });
     try {
-      const allMovies = await fetchPopularMovies(page);
+      const { preferredGenres, preferredLanguages, feedCycle } = get();
+      const genres = genreIds ?? preferredGenres;
+      const langs = languages ?? preferredLanguages;
+      const currentCycle = cycle ?? feedCycle;
+
+      const allMovies = await fetchFeedBatch(genres, langs, currentCycle);
       const { swipedMovieIds } = get();
-      // Filter out already-swiped movies
       const newMovies = allMovies.filter((m) => !swipedMovieIds.has(m.id));
+
       set((state) => ({
-        movies: page === 1 ? newMovies : [...state.movies, ...newMovies],
-        currentPage: page,
+        movies: currentCycle === 0 ? newMovies : [...state.movies, ...newMovies],
+        feedCycle: currentCycle + 1,
         isLoading: false,
       }));
-    } catch (err) {
-      console.error('Failed to load movies:', err);
-      set({ isLoading: false });
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        loadError: err?.message ?? 'Failed to load movies',
+      });
     }
   },
 
@@ -66,13 +84,12 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
 
     set({ currentIndex: nextIndex, likedMovieIds: newLiked, swipedMovieIds: newSwiped });
 
-    // Prefetch next page if nearing the end
+    // Prefetch next batch if nearing the end
     const remaining = state.movies.length - nextIndex;
     if (remaining <= PREFETCH_THRESHOLD && !state.isLoading) {
-      get().loadMovies(state.currentPage + 1);
+      get().loadMovies();
     }
 
-    // Record to Supabase (user_swipes table — global, no room_id)
     const { error } = await supabase.from('user_swipes').insert({
       user_id: userId,
       tmdb_movie_id: movieId,
@@ -80,26 +97,24 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     });
 
     if (error) {
-      // Ignore duplicate swipe errors
       if (error.code === '23505') return false;
-      console.error('Swipe insert failed:', error);
       return false;
     }
 
-    // Check for matches with connections if liked
     if (liked) {
       useMatchStore.getState().checkMatchesForSwipe(userId, movieId);
     }
 
-    return false;
+    return true;
   },
 
   reset: () =>
     set({
       movies: [],
       currentIndex: 0,
-      currentPage: 1,
+      feedCycle: 0,
       isLoading: false,
+      loadError: null,
       likedMovieIds: new Set(),
       swipedMovieIds: new Set(),
     }),

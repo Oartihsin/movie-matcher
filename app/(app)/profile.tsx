@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  Linking,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
@@ -40,6 +41,61 @@ const GENRE_OPTIONS = Object.entries(GENRE_MAP).map(([id, name]) => ({
   name,
 }));
 
+function ChipGrid({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: { id: string | number; label: string }[];
+  selected: (string | number)[];
+  onToggle: (val: any) => void;
+}) {
+  return (
+    <View style={styles.chipGrid}>
+      {options.map((opt) => {
+        const isSelected = selected.includes(opt.id);
+        return (
+          <TouchableOpacity
+            key={String(opt.id)}
+            style={[styles.chip, isSelected && styles.chipSelected]}
+            onPress={() => onToggle(opt.id)}
+          >
+            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  summary,
+  children,
+}: {
+  title: string;
+  summary: string;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <View>
+      <TouchableOpacity style={styles.settingsRow} onPress={() => setExpanded((v) => !v)}>
+        <Text style={styles.settingsRowLabel}>{title}</Text>
+        <View style={styles.settingsRowRight}>
+          <Text style={styles.settingsRowValue} numberOfLines={1}>
+            {summary}
+          </Text>
+          <Text style={styles.chevron}>{expanded ? '▲' : '▼'}</Text>
+        </View>
+      </TouchableOpacity>
+      {expanded && <View style={styles.chipContainer}>{children}</View>}
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
@@ -47,6 +103,7 @@ export default function ProfileScreen() {
   const fetchProfile = useAuthStore((s) => s.fetchProfile);
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
+  const [editingName, setEditingName] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<number[]>(
     profile?.preferred_genres ?? []
   );
@@ -54,16 +111,46 @@ export default function ProfileScreen() {
     profile?.preferred_languages ?? ['en']
   );
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const isDirty =
+    displayName !== (profile?.display_name ?? '') ||
+    JSON.stringify(selectedGenres.slice().sort()) !==
+      JSON.stringify((profile?.preferred_genres ?? []).slice().sort()) ||
+    JSON.stringify(selectedLanguages.slice().sort()) !==
+      JSON.stringify((profile?.preferred_languages ?? ['en']).slice().sort());
+
   const link = `moviematcher.app/u/${profile?.username}`;
+
+  const genreSummary =
+    selectedGenres.length === 0
+      ? 'None selected'
+      : GENRE_OPTIONS.filter((g) => selectedGenres.includes(g.id))
+          .slice(0, 3)
+          .map((g) => g.name)
+          .join(', ') + (selectedGenres.length > 3 ? ` +${selectedGenres.length - 3}` : '');
+
+  const languageSummary =
+    selectedLanguages.length === 0
+      ? 'None selected'
+      : LANGUAGE_OPTIONS.filter((l) => selectedLanguages.includes(l.code))
+          .slice(0, 2)
+          .map((l) => l.label)
+          .join(', ') +
+        (selectedLanguages.length > 2 ? ` +${selectedLanguages.length - 2}` : '');
 
   async function handleSave() {
     if (!profile) return;
     setSaving(true);
+    setSaveError(null);
     try {
-      const { error } = await supabase
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out. Check your connection.')), 10000)
+      );
+
+      const save = supabase
         .from('profiles')
         .update({
           display_name: displayName,
@@ -73,21 +160,29 @@ export default function ProfileScreen() {
         })
         .eq('id', profile.id);
 
+      const { error } = await Promise.race([save, timeout]);
       if (error) throw error;
+
       await fetchProfile();
       setSaved(true);
+      setEditingName(false);
       setTimeout(() => setSaved(false), 2000);
     } catch (err: any) {
-      console.error('Profile save error:', err);
+      setSaveError(err?.message ?? 'Failed to save. Try again.');
     } finally {
       setSaving(false);
     }
   }
 
   async function copyLink() {
-    await Clipboard.setStringAsync(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await Clipboard.setStringAsync(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setSaveError('Could not copy to clipboard');
+      setTimeout(() => setSaveError(null), 3000);
+    }
   }
 
   async function handleSignOut() {
@@ -110,188 +205,325 @@ export default function ProfileScreen() {
   if (!profile) return null;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      {/* Avatar + name */}
-      <View style={styles.avatarSection}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {profile.display_name?.[0]?.toUpperCase() ?? '?'}
-          </Text>
-        </View>
-        <Text style={styles.username}>@{profile.username}</Text>
-        {profile.phone_verified && (
-          <Text style={styles.verifiedBadge}>Phone Verified</Text>
-        )}
-      </View>
-
-      {/* Shareable link */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Link</Text>
-        <TouchableOpacity style={styles.linkBox} onPress={copyLink}>
-          <Text style={styles.linkText}>{link}</Text>
-          <Text style={styles.copyHint}>
-            {copied ? 'Copied!' : 'Tap to copy'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Display name */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Display Name</Text>
-        <TextInput
-          style={styles.input}
-          value={displayName}
-          onChangeText={setDisplayName}
-          placeholder="Your name"
-          placeholderTextColor="#666"
-        />
-      </View>
-
-      {/* Preferred genres */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferred Genres</Text>
-        <View style={styles.chipGrid}>
-          {GENRE_OPTIONS.map((genre) => {
-            const selected = selectedGenres.includes(genre.id);
-            return (
-              <TouchableOpacity
-                key={genre.id}
-                style={[styles.chip, selected && styles.chipSelected]}
-                onPress={() => toggleGenre(genre.id)}
-              >
-                <Text
-                  style={[styles.chipText, selected && styles.chipTextSelected]}
-                >
-                  {genre.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Preferred languages */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferred Languages</Text>
-        <View style={styles.chipGrid}>
-          {LANGUAGE_OPTIONS.map((lang) => {
-            const selected = selectedLanguages.includes(lang.code);
-            return (
-              <TouchableOpacity
-                key={lang.code}
-                style={[styles.chip, selected && styles.chipSelected]}
-                onPress={() => toggleLanguage(lang.code)}
-              >
-                <Text
-                  style={[styles.chipText, selected && styles.chipTextSelected]}
-                >
-                  {lang.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Save button */}
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={handleSave}
-        disabled={saving}
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        {saving ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.saveButtonText}>
-            {saved ? 'Saved!' : 'Save Changes'}
-          </Text>
-        )}
-      </TouchableOpacity>
+        {/* Hero Header */}
+        <View style={styles.hero}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {profile.display_name?.[0]?.toUpperCase() ?? '?'}
+            </Text>
+          </View>
+          <Text style={styles.heroName}>{profile.display_name}</Text>
+          <View style={styles.heroBadgeRow}>
+            <Text style={styles.heroUsername}>@{profile.username}</Text>
+            {profile.phone_verified && (
+              <>
+                <Text style={styles.badgeDot}>·</Text>
+                <Text style={styles.verifiedBadge}>✓ Verified</Text>
+              </>
+            )}
+          </View>
+        </View>
 
-      {/* Sign out */}
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
+        {/* Profile Card */}
+        <Text style={styles.sectionLabel}>PROFILE</Text>
+        <View style={styles.card}>
+          {/* Display Name Row */}
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => setEditingName((v) => !v)}
+          >
+            <Text style={styles.settingsRowLabel}>Display Name</Text>
+            {!editingName && (
+              <View style={styles.settingsRowRight}>
+                <Text style={styles.settingsRowValue}>{displayName}</Text>
+                <Text style={styles.chevron}>›</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          {editingName && (
+            <View style={styles.inlineEdit}>
+              <TextInput
+                style={styles.input}
+                value={displayName}
+                onChangeText={setDisplayName}
+                placeholder="Your name"
+                placeholderTextColor="#666"
+                autoFocus
+              />
+            </View>
+          )}
 
-      <View style={{ height: 48 }} />
-    </ScrollView>
+          <View style={styles.divider} />
+
+          {/* Invite Link Row */}
+          <TouchableOpacity style={styles.settingsRow} onPress={copyLink}>
+            <Text style={styles.settingsRowLabel}>Invite Link</Text>
+            <View style={styles.settingsRowRight}>
+              <Text style={[styles.settingsRowValue, styles.linkValue]} numberOfLines={1}>
+                {link}
+              </Text>
+              <Text style={styles.copyIcon}>{copied ? '✓' : '⎘'}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Preferences Card */}
+        <Text style={styles.sectionLabel}>PREFERENCES</Text>
+        <View style={styles.card}>
+          <CollapsibleSection title="Genres" summary={genreSummary}>
+            <ChipGrid
+              options={GENRE_OPTIONS.map((g) => ({ id: g.id, label: g.name }))}
+              selected={selectedGenres}
+              onToggle={toggleGenre}
+            />
+          </CollapsibleSection>
+
+          <View style={styles.divider} />
+
+          <CollapsibleSection title="Languages" summary={languageSummary}>
+            <ChipGrid
+              options={LANGUAGE_OPTIONS.map((l) => ({ id: l.code, label: l.label }))}
+              selected={selectedLanguages}
+              onToggle={toggleLanguage}
+            />
+          </CollapsibleSection>
+        </View>
+
+        {/* Support Card */}
+        <Text style={styles.sectionLabel}>SUPPORT</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => Linking.openURL('https://moviematcher.app/terms')}
+          >
+            <Text style={styles.settingsRowLabel}>Terms & Conditions</Text>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => Linking.openURL('mailto:hello@moviematcher.app?subject=Contact Us')}
+          >
+            <Text style={styles.settingsRowLabel}>Contact Us</Text>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() =>
+              Linking.openURL(
+                'mailto:hello@moviematcher.app?subject=Bug Report&body=Describe the bug here...'
+              )
+            }
+          >
+            <Text style={styles.settingsRowLabel}>Report a Bug</Text>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Account Card — always last */}
+        <Text style={styles.sectionLabel}>ACCOUNT</Text>
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.settingsRow} onPress={handleSignOut}>
+            <Text style={styles.destructiveLabel}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: isDirty ? 100 : 48 }} />
+      </ScrollView>
+
+      {/* Floating Save Button — only visible when changes pending */}
+      {isDirty && (
+        <View style={styles.floatingBar}>
+          {saveError && (
+            <Text style={styles.saveError}>{saveError}</Text>
+          )}
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>{saved ? 'Saved!' : 'Save Changes'}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
+  container: {
     flex: 1,
     backgroundColor: '#16213e',
   },
-  content: {
-    padding: 24,
+  scroll: {
+    flex: 1,
   },
-  avatarSection: {
+  content: {
+    paddingBottom: 24,
+  },
+
+  // Hero
+  hero: {
     alignItems: 'center',
-    marginBottom: 28,
+    paddingTop: 16,
+    paddingBottom: 28,
+    paddingHorizontal: 24,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: '#e94560',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
+    shadowColor: '#e94560',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   avatarText: {
     color: '#fff',
-    fontSize: 32,
+    fontSize: 38,
     fontWeight: '800',
   },
-  username: {
+  heroName: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  heroBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  heroUsername: {
     color: '#a0a0b0',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  badgeDot: {
+    color: '#a0a0b0',
+    fontSize: 15,
   },
   verifiedBadge: {
     color: '#4ecdc4',
     fontSize: 13,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    color: '#fff',
-    fontSize: 16,
     fontWeight: '700',
-    marginBottom: 10,
   },
-  linkBox: {
-    backgroundColor: '#1a1a2e',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e94560',
-    alignItems: 'center',
-  },
-  linkText: {
-    color: '#e94560',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  copyHint: {
+
+  // Section label (iOS Settings style)
+  sectionLabel: {
     color: '#666',
     fontSize: 12,
-    marginTop: 4,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginLeft: 20,
+    marginBottom: 6,
+    marginTop: 24,
   },
-  input: {
+
+  // Card
+  card: {
     backgroundColor: '#1a1a2e',
+    marginHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    overflow: 'hidden',
+  },
+
+  // Settings rows
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 52,
+  },
+  settingsRowLabel: {
     color: '#fff',
     fontSize: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 12,
+    fontWeight: '500',
+  },
+  settingsRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  settingsRowValue: {
+    color: '#a0a0b0',
+    fontSize: 15,
+    maxWidth: 160,
+    textAlign: 'right',
+  },
+  linkValue: {
+    color: '#e94560',
+    fontSize: 13,
+  },
+  chevron: {
+    color: '#666',
+    fontSize: 14,
+    marginLeft: 2,
+  },
+  copyIcon: {
+    color: '#4ecdc4',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  destructiveLabel: {
+    color: '#ff6b6b',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    marginLeft: 16,
+  },
+
+  // Inline name edit
+  inlineEdit: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+  input: {
+    backgroundColor: '#0f1228',
+    color: '#fff',
+    fontSize: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(233,69,96,0.4)',
+  },
+
+  // Chips
+  chipContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 4,
   },
   chipGrid: {
     flexDirection: 'row',
@@ -319,26 +551,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
   },
+
+  // Floating save bar
+  floatingBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
+    paddingTop: 12,
+    backgroundColor: 'rgba(22,33,62,0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.07)',
+  },
   saveButton: {
     backgroundColor: '#e94560',
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
   },
-  signOutButton: {
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  signOutText: {
+  saveError: {
     color: '#ff6b6b',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 8,
   },
 });

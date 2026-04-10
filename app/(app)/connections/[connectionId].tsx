@@ -24,6 +24,7 @@ export default function ConnectionMatchesScreen() {
   const connections = useConnectionStore((s) => s.connections);
   const currentMatches = useMatchStore((s) => s.currentMatches);
   const isLoading = useMatchStore((s) => s.isLoading);
+  const error = useMatchStore((s) => s.error);
   const fetchMatches = useMatchStore((s) => s.fetchMatchesForConnection);
 
   const [movieDetails, setMovieDetails] = useState<Record<number, TMDBMovie>>({});
@@ -74,7 +75,20 @@ export default function ConnectionMatchesScreen() {
         Movies you and {friendName} both liked
       </Text>
 
-      {currentMatches.length === 0 && !isLoading && (
+      {error && !isLoading && (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyEmoji}>⚠️</Text>
+          <Text style={styles.emptyTitle}>Could not load matches</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => connectionId && fetchMatches(connectionId)}
+          >
+            <Text style={styles.retryText}>Tap to retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {currentMatches.length === 0 && !isLoading && !error && (
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>🎬</Text>
           <Text style={styles.emptyTitle}>No matches yet</Text>
@@ -214,5 +228,17 @@ const styles = StyleSheet.create({
     color: '#e94560',
     fontSize: 12,
     fontWeight: '600',
+  },
+  retryButton: {
+    backgroundColor: '#e94560',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+    marginTop: 16,
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
