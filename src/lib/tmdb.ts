@@ -1,14 +1,34 @@
-import { TMDB_API_KEY, TMDB_BASE_URL, TMDB_IMAGE_BASE } from './constants';
+import { SUPABASE_ANON_KEY, TMDB_PROXY_URL, TMDB_IMAGE_BASE } from './constants';
+import { getSupabase } from './supabase';
 import type { TMDBMovie, TMDBResponse } from '../types/tmdb';
 
+// ─── Proxy helper ─────────────────────────────────────────────────────────────
+
+async function getAuthHeader(): Promise<string> {
+  const { data: { session } } = await getSupabase().auth.getSession();
+  return `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}`;
+}
+
+async function tmdbFetch(path: string, params: Record<string, string>): Promise<any> {
+  const qs = new URLSearchParams({ path, ...params }).toString();
+  const auth = await getAuthHeader();
+  const res = await fetch(`${TMDB_PROXY_URL}?${qs}`, {
+    headers: {
+      Authorization: auth,
+      apikey: SUPABASE_ANON_KEY,
+    },
+  });
+  if (!res.ok) throw new Error(`TMDB proxy error: ${res.status}`);
+  return res.json();
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
 export async function fetchPopularMovies(page: number): Promise<TMDBMovie[]> {
-  const res = await fetch(
-    `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&page=${page}&language=en-US`
-  );
-  if (!res.ok) {
-    throw new Error(`TMDB error: ${res.status}`);
-  }
-  const data: TMDBResponse = await res.json();
+  const data: TMDBResponse = await tmdbFetch('/movie/popular', {
+    page: String(page),
+    language: 'en-US',
+  });
   return data.results.filter((m) => m.poster_path !== null && m.vote_count > 0);
 }
 
@@ -29,19 +49,16 @@ async function discoverPage(
   page: number,
   extraParams?: Record<string, string>
 ): Promise<TMDBMovie[]> {
-  const params = new URLSearchParams({
-    api_key: TMDB_API_KEY,
+  const params: Record<string, string> = {
     page: String(page),
     sort_by: sortBy,
     'vote_count.gte': '10',
-  });
-  if (genreIds.length > 0) params.set('with_genres', genreIds.join(','));
-  if (languages.length > 0) params.set('with_original_language', languages.join('|'));
-  if (extraParams) Object.entries(extraParams).forEach(([k, v]) => params.set(k, v));
+  };
+  if (genreIds.length > 0) params['with_genres'] = genreIds.join(',');
+  if (languages.length > 0) params['with_original_language'] = languages.join('|');
+  if (extraParams) Object.assign(params, extraParams);
 
-  const res = await fetch(`${TMDB_BASE_URL}/discover/movie?${params.toString()}`);
-  if (!res.ok) return [];
-  const data: TMDBResponse = await res.json();
+  const data: TMDBResponse = await tmdbFetch('/discover/movie', params);
   return data.results.filter((m) => m.poster_path !== null && m.vote_count > 0);
 }
 
@@ -109,28 +126,20 @@ export async function fetchDiscoverMovies(
   if (genreIds.length === 0 && languages.length === 0) {
     return fetchPopularMovies(page);
   }
-  const params = new URLSearchParams({
-    api_key: TMDB_API_KEY,
+  const params: Record<string, string> = {
     page: String(page),
     sort_by: 'popularity.desc',
     'vote_count.gte': '10',
-  });
-  if (genreIds.length > 0) params.set('with_genres', genreIds.join(','));
-  if (languages.length > 0) params.set('with_original_language', languages.join('|'));
-  const res = await fetch(`${TMDB_BASE_URL}/discover/movie?${params.toString()}`);
-  if (!res.ok) throw new Error(`TMDB error: ${res.status}`);
-  const data: TMDBResponse = await res.json();
+  };
+  if (genreIds.length > 0) params['with_genres'] = genreIds.join(',');
+  if (languages.length > 0) params['with_original_language'] = languages.join('|');
+
+  const data: TMDBResponse = await tmdbFetch('/discover/movie', params);
   return data.results.filter((m) => m.poster_path !== null && m.vote_count > 0);
 }
 
 export async function fetchMovieDetails(movieId: number): Promise<TMDBMovie> {
-  const res = await fetch(
-    `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=en-US`
-  );
-  if (!res.ok) {
-    throw new Error(`TMDB error: ${res.status}`);
-  }
-  const data = await res.json();
+  const data = await tmdbFetch(`/movie/${movieId}`, { language: 'en-US' });
   // /movie/{id} returns genres:[{id,name}] instead of genre_ids:[number]
   if (data.genres && !data.genre_ids) {
     data.genre_ids = data.genres.map((g: { id: number }) => g.id);

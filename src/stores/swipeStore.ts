@@ -97,7 +97,8 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     });
 
     if (error) {
-      if (error.code === '23505') return false;
+      // 23505 = duplicate swipe already recorded — treat as success, skip match re-check
+      if (error.code === '23505') return true;
       return false;
     }
 

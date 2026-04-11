@@ -47,6 +47,7 @@ export default function HomeSwipeScreen() {
   const isLoading = useSwipeStore((s) => s.isLoading);
   const loadError = useSwipeStore((s) => s.loadError);
   const loadMovies = useSwipeStore((s) => s.loadMovies);
+  const loadSwipedIds = useSwipeStore((s) => s.loadSwipedIds);
   const recordSwipe = useSwipeStore((s) => s.recordSwipe);
 
   const [swipeError, setSwipeError] = useState<string | null>(null);
@@ -71,11 +72,15 @@ export default function HomeSwipeScreen() {
 
   // Load movies with user preferences on mount
   useEffect(() => {
+    if (!user) return;
     const genres = profile?.preferred_genres ?? [];
     const languages = profile?.preferred_languages ?? [];
     useSwipeStore.getState().reset();
     setPreferences(genres, languages);
-    loadMovies(0, genres, languages);
+    // Load already-swiped IDs first so the feed filters them out
+    loadSwipedIds(user.id).then(() => {
+      loadMovies(0, genres, languages);
+    });
     fetchPendingCount();
   }, []);
 
