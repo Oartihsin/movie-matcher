@@ -9,6 +9,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
@@ -21,6 +22,7 @@ import { useConnectionStore } from '../../src/stores/connectionStore';
 import { useMatchStore } from '../../src/stores/matchStore';
 import { useMatchSubscription } from '../../src/hooks/useMatchSubscription';
 import { MatchToast } from '../../src/components/MatchToast';
+import { SwipeTutorial } from '../../src/components/SwipeTutorial';
 import { GENRE_MAP } from '../../src/types/tmdb';
 
 const { width } = Dimensions.get('window');
@@ -51,6 +53,7 @@ export default function HomeSwipeScreen() {
   const recordSwipe = useSwipeStore((s) => s.recordSwipe);
 
   const [swipeError, setSwipeError] = useState<string | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const pendingCount = useConnectionStore((s) => s.pendingCount);
   const fetchPendingCount = useConnectionStore((s) => s.fetchPendingCount);
@@ -82,11 +85,22 @@ export default function HomeSwipeScreen() {
       loadMovies(0, genres, languages);
     });
     fetchPendingCount();
+    // Show tutorial on first launch
+    AsyncStorage.getItem('@mm_tutorial_seen').then((seen) => {
+      if (!seen) setShowTutorial(true);
+    });
+  }, []);
+
+  const dismissTutorial = useCallback(() => {
+    setShowTutorial(false);
+    AsyncStorage.setItem('@mm_tutorial_seen', 'true');
   }, []);
 
   const handleSwipe = useCallback(
     async (liked: boolean) => {
       if (!user || !currentMovie) return;
+
+      if (showTutorial) dismissTutorial();
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -100,7 +114,7 @@ export default function HomeSwipeScreen() {
       // Reset scroll to top for next card
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     },
-    [user, currentMovie, recordSwipe]
+    [user, currentMovie, recordSwipe, showTutorial, dismissTutorial]
   );
 
   // Loading movies
@@ -266,6 +280,9 @@ export default function HomeSwipeScreen() {
 
       {/* Share prompt (shown once after onboarding) */}
       {profile && <SharePrompt username={profile.username} />}
+
+      {/* First-time swipe tutorial */}
+      {showTutorial && <SwipeTutorial onDismiss={dismissTutorial} />}
 
       {/* Match toast notification */}
       {recentMatchMovieId && (
