@@ -4,8 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
+  RefreshControl,
   Dimensions,
   Platform,
 } from 'react-native';
@@ -23,6 +23,7 @@ import { useMatchStore } from '../../src/stores/matchStore';
 import { useMatchSubscription } from '../../src/hooks/useMatchSubscription';
 import { MatchToast } from '../../src/components/MatchToast';
 import { SwipeTutorial } from '../../src/components/SwipeTutorial';
+import { SkeletonCard } from '../../src/components/SkeletonCard';
 import { GENRE_MAP } from '../../src/types/tmdb';
 
 const { width } = Dimensions.get('window');
@@ -53,6 +54,8 @@ export default function HomeSwipeScreen() {
 
   const [swipeError, setSwipeError] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const pendingSwipeCount = useSwipeStore((s) => s.pendingSwipes.length);
 
   const pendingCount = useConnectionStore((s) => s.pendingCount);
   const fetchPendingCount = useConnectionStore((s) => s.fetchPendingCount);
@@ -82,6 +85,8 @@ export default function HomeSwipeScreen() {
     // Server-side dedup: loadMovies calls filter_unswiped_movie_ids RPC
     loadMovies(0, genres, languages);
     fetchPendingCount();
+    // Flush any offline-queued swipes
+    useSwipeStore.getState().flushPendingSwipes();
     // Show tutorial on first launch
     AsyncStorage.getItem('@mm_tutorial_seen').then((seen) => {
       if (!seen) setShowTutorial(true);
@@ -92,6 +97,15 @@ export default function HomeSwipeScreen() {
     setShowTutorial(false);
     AsyncStorage.setItem('@mm_tutorial_seen', 'true');
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    const genres = profile?.preferred_genres ?? [];
+    const languages = profile?.preferred_languages ?? [];
+    useSwipeStore.getState().reset();
+    await loadMovies(0, genres, languages);
+    setIsRefreshing(false);
+  }, [profile, loadMovies]);
 
   const handleSwipe = useCallback(
     async (liked: boolean) => {
@@ -114,12 +128,16 @@ export default function HomeSwipeScreen() {
     [user, currentMovie, recordSwipe, showTutorial, dismissTutorial]
   );
 
-  // Loading movies
+  // Loading movies — show skeleton card instead of spinner
   if (movies.length === 0 && isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#e94560" />
-        <Text style={styles.loadingText}>Loading movies...</Text>
+        <View style={styles.header}>
+          <View style={styles.headerButton} />
+          <Text style={styles.headerTitle}>Home</Text>
+          <View style={styles.headerButton} />
+        </View>
+        <SkeletonCard />
       </View>
     );
   }
@@ -154,12 +172,45 @@ export default function HomeSwipeScreen() {
   if (allSwiped) {
     return (
       <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => router.push('/(app)/connections')}
+          >
+            <Text style={styles.headerIcon}>👥</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Home</Text>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => router.push('/(app)/profile')}
+          >
+            <Text style={styles.headerButtonText}>
+              {profile?.display_name?.[0]?.toUpperCase() ?? '?'}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>🎉</Text>
+          <Text style={styles.emptyEmoji}>🍿</Text>
           <Text style={styles.emptyTitle}>You've seen them all!</Text>
           <Text style={styles.emptySubtitle}>
-            Come back later for more movies
+            Check back later for fresh picks, or adjust your preferences to discover more movies.
           </Text>
+          {pendingSwipeCount > 0 && (
+            <Text style={styles.pendingSyncText}>
+              {pendingSwipeCount} swipe{pendingSwipeCount > 1 ? 's' : ''} pending sync
+            </Text>
+          )}
+          <View style={styles.emptyActions}>
+            <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+              <Text style={styles.retryButtonText}>Refresh Feed</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.retryButton, styles.secondaryButton]}
+              onPress={() => router.push('/(app)/profile')}
+            >
+              <Text style={styles.retryButtonText}>Edit Preferences</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -211,6 +262,14 @@ export default function HomeSwipeScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor="#e94560"
+              colors={['#e94560']}
+            />
+          }
         >
           {/* Movie poster */}
           {currentMovie && <MovieCard movie={currentMovie} />}
@@ -490,6 +549,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 24,
     marginBottom: 24,
+    lineHeight: 24,
+  },
+  pendingSyncText: {
+    fontSize: 13,
+    color: '#e94560',
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  emptyActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  secondaryButton: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   retryButton: {
     backgroundColor: '#e94560',

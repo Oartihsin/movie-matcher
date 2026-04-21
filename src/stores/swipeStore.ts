@@ -4,6 +4,12 @@ import { fetchFeedBatch } from '../lib/tmdb';
 import { supabase } from '../lib/supabase';
 import { PREFETCH_THRESHOLD } from '../lib/constants';
 
+interface PendingSwipe {
+  userId: string;
+  movieId: number;
+  liked: boolean;
+}
+
 interface SwipeState {
   movies: TMDBMovie[];
   currentIndex: number;
@@ -12,12 +18,14 @@ interface SwipeState {
   loadError: string | null;
   likedMovieIds: Set<number>;
   sessionSwipedIds: Set<number>; // optimistic dedup for current session only
+  pendingSwipes: PendingSwipe[]; // offline queue — retried on next opportunity
   preferredGenres: number[];
   preferredLanguages: string[];
 
   loadMovies: (cycle?: number, genreIds?: number[], languages?: string[]) => Promise<void>;
   setPreferences: (genreIds: number[], languages: string[]) => void;
   recordSwipe: (userId: string, movieId: number, liked: boolean) => Promise<boolean>;
+  flushPendingSwipes: () => Promise<void>;
   reset: () => void;
 }
 
@@ -29,6 +37,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
   loadError: null,
   likedMovieIds: new Set(),
   sessionSwipedIds: new Set(),
+  pendingSwipes: [],
   preferredGenres: [],
   preferredLanguages: [],
 
@@ -89,6 +98,9 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       get().loadMovies();
     }
 
+    // Flush any pending swipes from previous failures
+    get().flushPendingSwipes();
+
     // Rate limit: 60 swipes per minute
     const { data: allowed } = await supabase.rpc('check_rate_limit', {
       p_user_id: userId,
@@ -105,13 +117,32 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
         { onConflict: 'user_id,tmdb_movie_id' }
       );
 
-    if (error) return false;
-
-    // Match detection now runs server-side via Postgres trigger
-    // (trg_check_matches_after_swipe). Realtime subscription in
-    // useMatchSubscription picks up new connection_matches rows.
+    if (error) {
+      // Queue for retry when network recovers
+      set((s) => ({
+        pendingSwipes: [...s.pendingSwipes, { userId, movieId, liked }],
+      }));
+      return false;
+    }
 
     return true;
+  },
+
+  flushPendingSwipes: async () => {
+    const { pendingSwipes } = get();
+    if (pendingSwipes.length === 0) return;
+
+    const remaining: PendingSwipe[] = [];
+    for (const swipe of pendingSwipes) {
+      const { error } = await supabase
+        .from('user_swipes')
+        .upsert(
+          { user_id: swipe.userId, tmdb_movie_id: swipe.movieId, liked: swipe.liked },
+          { onConflict: 'user_id,tmdb_movie_id' }
+        );
+      if (error) remaining.push(swipe);
+    }
+    set({ pendingSwipes: remaining });
   },
 
   reset: () =>
@@ -123,5 +154,6 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       loadError: null,
       likedMovieIds: new Set(),
       sessionSwipedIds: new Set(),
+      pendingSwipes: [],
     }),
 }));
