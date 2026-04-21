@@ -300,7 +300,7 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.settingsRow}
-            onPress={() => Linking.openURL('https://moviematcher.app/terms')}
+            onPress={() => Linking.openURL('https://docs.google.com/document/d/1VgA24itUDU89guhxNlrnlDN53MPU0DY4fomAYOASF0E/edit?usp=sharing')}
           >
             <Text style={styles.settingsRowLabel}>Terms & Conditions</Text>
             <Text style={styles.chevron}>›</Text>
@@ -310,7 +310,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.settingsRow}
-            onPress={() => Linking.openURL('https://moviematcher.app/privacy')}
+            onPress={() => Linking.openURL('https://docs.google.com/document/d/1E94939sWQfrIeEwwrCatSN35PpXqRMp9TK_mauxrtK0/edit?usp=sharing')}
           >
             <Text style={styles.settingsRowLabel}>Privacy Policy</Text>
             <Text style={styles.chevron}>›</Text>
