@@ -44,6 +44,18 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
   sendRequest: async (addresseeId: string) => {
     try {
+      // Rate limit: 10 connection requests per hour
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: allowed } = await supabase.rpc('check_rate_limit', {
+          p_user_id: user.id,
+          p_action: 'connection_request',
+          p_max_count: 10,
+          p_window_seconds: 3600,
+        });
+        if (allowed === false) return { error: 'Too many connection requests. Please wait.' };
+      }
+
       const { data, error } = await supabase.rpc('send_connection_request', {
         p_addressee_id: addresseeId,
       });

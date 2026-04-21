@@ -89,6 +89,15 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       get().loadMovies();
     }
 
+    // Rate limit: 60 swipes per minute
+    const { data: allowed } = await supabase.rpc('check_rate_limit', {
+      p_user_id: userId,
+      p_action: 'swipe',
+      p_max_count: 60,
+      p_window_seconds: 60,
+    });
+    if (allowed === false) return false;
+
     const { error } = await supabase
       .from('user_swipes')
       .upsert(
