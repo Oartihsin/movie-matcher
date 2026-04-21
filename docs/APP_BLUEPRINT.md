@@ -23,6 +23,10 @@ Sign Up → Onboarding (verify phone, set username, pick preferences)
 - First-time tutorial overlay
 - Share/invite friends via username link
 - Preference-based feed personalization
+- Offline swipe queue with automatic retry
+- Pull-to-refresh on feed
+- Skeleton shimmer loading cards
+- Actionable empty states with CTAs
 
 ---
 
@@ -516,6 +520,20 @@ opacity.value = withTiming(1, { duration: 400 }); // show
 opacity.value = withTiming(0, { duration: 300 }); // dismiss
 ```
 
+### Skeleton Shimmer Card
+```typescript
+// Animated gradient that slides left-to-right repeatedly over placeholder blocks
+const shimmerX = useSharedValue(-CARD_WIDTH);
+useEffect(() => {
+  shimmerX.value = withRepeat(
+    withTiming(CARD_WIDTH, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+    -1
+  );
+}, []);
+// Overlay: LinearGradient with colors ['transparent', 'rgba(255,255,255,0.06)', 'transparent']
+// Applied to each placeholder block (poster, title, badges, description lines)
+```
+
 ---
 
 ## 10. Error Handling Patterns
@@ -562,17 +580,38 @@ const result = await Promise.race([
 ]);
 ```
 
-### Optimistic UI Pattern
+### Optimistic UI + Offline Queue Pattern
 ```typescript
 // 1. Update UI immediately
 set({ currentIndex: nextIndex, likedItems: new Set([...state.likedItems, itemId]) });
 
-// 2. Persist async (don't block UI)
+// 2. Flush any previously queued swipes
+get().flushPendingSwipes();
+
+// 3. Persist async (don't block UI)
 const { error } = await supabase.from('user_swipes').upsert({ ... });
 
-// 3. If error: could rollback (not implemented — rare enough to ignore)
-if (error) return false;
+// 4. On failure: queue for retry instead of losing the swipe
+if (error) {
+  set((s) => ({ pendingSwipes: [...s.pendingSwipes, { userId, itemId, liked }] }));
+  return false;
+}
 return true;
+```
+
+### Offline Queue Flush Pattern
+```typescript
+flushPendingSwipes: async () => {
+  const { pendingSwipes } = get();
+  if (pendingSwipes.length === 0) return;
+  const remaining = [];
+  for (const swipe of pendingSwipes) {
+    const { error } = await supabase.from('user_swipes').upsert({ ... });
+    if (error) remaining.push(swipe);
+  }
+  set({ pendingSwipes: remaining });
+}
+// Trigger: on app mount, on every successful swipe, on pull-to-refresh
 ```
 
 ---
