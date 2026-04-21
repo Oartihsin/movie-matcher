@@ -11,13 +11,12 @@ interface SwipeState {
   isLoading: boolean;
   loadError: string | null;
   likedMovieIds: Set<number>;
-  swipedMovieIds: Set<number>;
+  sessionSwipedIds: Set<number>; // optimistic dedup for current session only
   preferredGenres: number[];
   preferredLanguages: string[];
 
   loadMovies: (cycle?: number, genreIds?: number[], languages?: string[]) => Promise<void>;
   setPreferences: (genreIds: number[], languages: string[]) => void;
-  loadSwipedIds: (userId: string) => Promise<void>;
   recordSwipe: (userId: string, movieId: number, liked: boolean) => Promise<boolean>;
   reset: () => void;
 }
@@ -29,7 +28,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
   isLoading: false,
   loadError: null,
   likedMovieIds: new Set(),
-  swipedMovieIds: new Set(),
+  sessionSwipedIds: new Set(),
   preferredGenres: [],
   preferredLanguages: [],
 
@@ -37,26 +36,27 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     set({ preferredGenres: genreIds, preferredLanguages: languages });
   },
 
-  loadSwipedIds: async (userId: string) => {
-    const { data } = await supabase.rpc('get_swiped_movie_ids', {
-      p_user_id: userId,
-    });
-    if (data) {
-      set({ swipedMovieIds: new Set(data) });
-    }
-  },
-
   loadMovies: async (cycle, genreIds, languages) => {
     set({ isLoading: true, loadError: null });
     try {
-      const { preferredGenres, preferredLanguages, feedCycle } = get();
+      const { preferredGenres, preferredLanguages, feedCycle, sessionSwipedIds } = get();
       const genres = genreIds ?? preferredGenres;
       const langs = languages ?? preferredLanguages;
       const currentCycle = cycle ?? feedCycle;
 
       const allMovies = await fetchFeedBatch(genres, langs, currentCycle);
-      const { swipedMovieIds } = get();
-      const newMovies = allMovies.filter((m) => !swipedMovieIds.has(m.id));
+      const allIds = allMovies.map((m) => m.id);
+
+      // Server-side dedup: Postgres filters out already-swiped movies
+      const { data: unswipedIds } = await supabase.rpc('filter_unswiped_movie_ids', {
+        p_movie_ids: allIds,
+      });
+      const unswipedSet = new Set<number>(unswipedIds ?? allIds);
+
+      // Also filter out movies swiped optimistically this session
+      const newMovies = allMovies.filter(
+        (m) => unswipedSet.has(m.id) && !sessionSwipedIds.has(m.id)
+      );
 
       set((state) => ({
         movies: currentCycle === 0 ? newMovies : [...state.movies, ...newMovies],
@@ -79,9 +79,9 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     const newLiked = liked
       ? new Set([...state.likedMovieIds, movieId])
       : state.likedMovieIds;
-    const newSwiped = new Set([...state.swipedMovieIds, movieId]);
+    const newSwiped = new Set([...state.sessionSwipedIds, movieId]);
 
-    set({ currentIndex: nextIndex, likedMovieIds: newLiked, swipedMovieIds: newSwiped });
+    set({ currentIndex: nextIndex, likedMovieIds: newLiked, sessionSwipedIds: newSwiped });
 
     // Prefetch next batch if nearing the end
     const remaining = state.movies.length - nextIndex;
@@ -122,6 +122,6 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       isLoading: false,
       loadError: null,
       likedMovieIds: new Set(),
-      swipedMovieIds: new Set(),
+      sessionSwipedIds: new Set(),
     }),
 }));

@@ -49,7 +49,6 @@ export default function HomeSwipeScreen() {
   const isLoading = useSwipeStore((s) => s.isLoading);
   const loadError = useSwipeStore((s) => s.loadError);
   const loadMovies = useSwipeStore((s) => s.loadMovies);
-  const loadSwipedIds = useSwipeStore((s) => s.loadSwipedIds);
   const recordSwipe = useSwipeStore((s) => s.recordSwipe);
 
   const [swipeError, setSwipeError] = useState<string | null>(null);
@@ -80,10 +79,8 @@ export default function HomeSwipeScreen() {
     const languages = profile?.preferred_languages ?? [];
     useSwipeStore.getState().reset();
     setPreferences(genres, languages);
-    // Load already-swiped IDs first so the feed filters them out
-    loadSwipedIds(user.id).then(() => {
-      loadMovies(0, genres, languages);
-    });
+    // Server-side dedup: loadMovies calls filter_unswiped_movie_ids RPC
+    loadMovies(0, genres, languages);
     fetchPendingCount();
     // Show tutorial on first launch
     AsyncStorage.getItem('@mm_tutorial_seen').then((seen) => {
