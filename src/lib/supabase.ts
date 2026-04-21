@@ -1,7 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './constants';
 import { Platform } from 'react-native';
+import { secureStorage } from './secure-storage';
 
 let _supabase: SupabaseClient | null = null;
 
@@ -12,8 +12,9 @@ export function getSupabase(): SupabaseClient {
 
   _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
-      // On web, use localStorage (default). On native, use AsyncStorage.
-      ...(isWeb ? {} : { storage: AsyncStorage }),
+      // On web, use localStorage (default). On native, use SecureStore.
+      // secureStorage auto-migrates existing AsyncStorage sessions on first read.
+      ...(isWeb ? {} : { storage: secureStorage }),
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: isWeb,
