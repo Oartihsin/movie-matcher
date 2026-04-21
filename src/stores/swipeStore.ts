@@ -3,7 +3,6 @@ import type { TMDBMovie } from '../types/tmdb';
 import { fetchFeedBatch } from '../lib/tmdb';
 import { supabase } from '../lib/supabase';
 import { PREFETCH_THRESHOLD } from '../lib/constants';
-import { useMatchStore } from './matchStore';
 
 interface SwipeState {
   movies: TMDBMovie[];
@@ -90,21 +89,18 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       get().loadMovies();
     }
 
-    const { error } = await supabase.from('user_swipes').insert({
-      user_id: userId,
-      tmdb_movie_id: movieId,
-      liked,
-    });
+    const { error } = await supabase
+      .from('user_swipes')
+      .upsert(
+        { user_id: userId, tmdb_movie_id: movieId, liked },
+        { onConflict: 'user_id,tmdb_movie_id' }
+      );
 
-    if (error) {
-      // 23505 = duplicate swipe already recorded — treat as success, skip match re-check
-      if (error.code === '23505') return true;
-      return false;
-    }
+    if (error) return false;
 
-    if (liked) {
-      useMatchStore.getState().checkMatchesForSwipe(userId, movieId);
-    }
+    // Match detection now runs server-side via Postgres trigger
+    // (trg_check_matches_after_swipe). Realtime subscription in
+    // useMatchSubscription picks up new connection_matches rows.
 
     return true;
   },
