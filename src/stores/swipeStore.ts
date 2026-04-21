@@ -101,14 +101,15 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     // Flush any pending swipes from previous failures
     get().flushPendingSwipes();
 
-    // Rate limit: 60 swipes per minute
-    const { data: allowed } = await supabase.rpc('check_rate_limit', {
+    // Rate limit: 60 swipes per minute (fail-open: allow swipe if RPC errors)
+    const { data: allowed, error: rlError } = await supabase.rpc('check_rate_limit', {
       p_user_id: userId,
       p_action: 'swipe',
       p_max_count: 60,
       p_window_seconds: 60,
     });
-    if (allowed === false) return false;
+    if (rlError) console.warn('Rate limit check failed:', rlError.message);
+    if (allowed === false && !rlError) return false;
 
     const { error } = await supabase
       .from('user_swipes')
@@ -118,6 +119,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       );
 
     if (error) {
+      console.warn('Swipe upsert failed:', error.message);
       // Queue for retry when network recovers
       set((s) => ({
         pendingSwipes: [...s.pendingSwipes, { userId, movieId, liked }],

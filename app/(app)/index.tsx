@@ -117,9 +117,9 @@ export default function HomeSwipeScreen() {
 
       const success = await recordSwipe(user.id, currentMovie.id, liked);
       if (!success && liked) {
-        // Show brief error — swipe advanced optimistically but failed to save
-        setSwipeError('Could not save swipe — check your connection');
-        setTimeout(() => setSwipeError(null), 3000);
+        // Swipe failed but is queued for retry — show subtle notice instead of error
+        setSwipeError('Swipe queued — will sync when online');
+        setTimeout(() => setSwipeError(null), 2000);
       }
 
       // Reset scroll to top for next card
@@ -580,8 +580,8 @@ const styles = StyleSheet.create({
     bottom: 110,
     left: 24,
     right: 24,
-    backgroundColor: 'rgba(255,107,107,0.95)',
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: 'center',
