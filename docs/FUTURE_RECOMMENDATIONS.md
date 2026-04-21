@@ -272,3 +272,84 @@ Current limits are per-user. Unauthenticated endpoints (login, signup) need per-
 
 ### Exponential Backoff on Repeated Violations
 Instead of flat rejection, increase the lockout duration: 1min → 5min → 15min → 1hour.
+
+---
+
+## 9. Add Swipe Undo Animation (#34)
+
+**Priority:** Medium — needed for undo/re-swipe feature
+**Dependencies:** #29 (premium undo feature)
+
+### Approach
+- When undo is triggered, animate the previous card sliding back from off-screen
+- Reverse the swipe-out animation: card enters from left/right based on original swipe direction
+- Use `withTiming` for smooth 300ms return animation
+- Store the previous swipe direction in `swipeStore` alongside `previousMovie`
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `src/components/SwipeableCard.tsx` | Add `undoAnimation` prop, reverse entry animation |
+| `src/stores/swipeStore.ts` | Track `lastSwipeDirection` |
+
+---
+
+## 10. Add Profile Avatar Upload (#35)
+
+**Priority:** Medium — cosmetic improvement
+**Dependencies:** Supabase Storage bucket
+
+### Approach
+1. Create a `avatars` bucket in Supabase Storage (public read, authenticated write)
+2. Use `expo-image-picker` to select photo from camera roll or take new photo
+3. Resize to 256x256 before upload (expo-image-manipulator)
+4. Upload to `avatars/{userId}.jpg` in Supabase Storage
+5. Update `profiles.avatar_url` with the public URL
+6. Replace the initial-letter circle with the actual image in all profile displays
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `app/(app)/profile.tsx` | Image picker, upload logic, avatar display |
+| `app/(app)/connections/index.tsx` | Show avatar in friend list |
+| `app/(app)/index.tsx` | Show avatar in header |
+
+---
+
+## 11. Improve Connection Blocking UX (#36)
+
+**Priority:** Medium — safety/moderation feature
+**Dependencies:** None (RPC already exists)
+
+### Approach
+- Add block button to connection detail screen and public profile
+- Confirmation dialog: "Block {name}? They won't be able to see your matches or send you requests."
+- Call existing `respond_to_connection(id, 'blocked')` RPC
+- Remove blocked connection from local state immediately
+- Add "Blocked Users" section in profile settings with unblock option
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `app/(app)/connections/[connectionId].tsx` | Add block button with confirmation |
+| `app/(app)/user/[username].tsx` | Add block option |
+| `app/(app)/profile.tsx` | Add "Blocked Users" section |
+
+---
+
+## 12. Add Haptic Differentiation (#37)
+
+**Priority:** Low — polish
+**Dependencies:** None
+
+### Approach
+Currently all swipes use `ImpactFeedbackStyle.Light`. Differentiate:
+- **Pass (swipe left):** `ImpactFeedbackStyle.Light` (soft dismissal)
+- **Like (swipe right):** `ImpactFeedbackStyle.Medium` (satisfying confirmation)
+- **Match detected:** `NotificationFeedbackType.Success` (celebratory)
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `app/(app)/index.tsx` | Different haptic in `handleSwipe` based on `liked` param |
+| `src/components/MatchToast.tsx` | Add `NotificationFeedbackType.Success` on mount |

@@ -108,7 +108,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       p_max_count: 60,
       p_window_seconds: 60,
     });
-    if (rlError) console.warn('Rate limit check failed:', rlError.message);
+    if (rlError && __DEV__) console.warn('Rate limit check failed:', rlError.message);
     if (allowed === false && !rlError) return false;
 
     const { error } = await supabase
@@ -119,7 +119,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       );
 
     if (error) {
-      console.warn('Swipe upsert failed:', error.message);
+      if (__DEV__) console.warn('Swipe upsert failed:', error.message);
       // Queue for retry when network recovers
       set((s) => ({
         pendingSwipes: [...s.pendingSwipes, { userId, movieId, liked }],

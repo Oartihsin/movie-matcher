@@ -41,7 +41,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       });
       set({ matchCounts: counts });
     } catch (err) {
-      console.error('Failed to fetch match counts:', err);
+      if (__DEV__) console.error('Failed to fetch match counts:', err);
     }
   },
 
@@ -54,7 +54,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       if (error) throw error;
       set({ currentMatches: data ?? [], isLoading: false });
     } catch (err: any) {
-      console.warn('Failed to fetch matches:', err);
+      if (__DEV__) console.warn('Failed to fetch matches:', err);
       set({ isLoading: false, error: err?.message ?? 'Failed to load matches' });
     }
   },
@@ -73,7 +73,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       }
       return count;
     } catch (err) {
-      console.error('Failed to check matches:', err);
+      if (__DEV__) console.error('Failed to check matches:', err);
       return 0;
     }
   },

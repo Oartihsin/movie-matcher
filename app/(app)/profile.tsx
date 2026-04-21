@@ -310,6 +310,16 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.settingsRow}
+            onPress={() => Linking.openURL('https://moviematcher.app/privacy')}
+          >
+            <Text style={styles.settingsRowLabel}>Privacy Policy</Text>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.settingsRow}
             onPress={() => Linking.openURL('mailto:hello@moviematcher.app?subject=Contact Us')}
           >
             <Text style={styles.settingsRowLabel}>Contact Us</Text>

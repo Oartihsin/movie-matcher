@@ -50,7 +50,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       .maybeSingle();
 
     if (error) {
-      console.error('Failed to fetch profile:', error);
+      if (__DEV__) console.error('Failed to fetch profile:', error);
       return null;
     }
 

@@ -38,7 +38,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       if (error) throw error;
       set({ pendingCount: data ?? 0 });
     } catch (err) {
-      console.error('Failed to fetch pending count:', err);
+      if (__DEV__) console.error('Failed to fetch pending count:', err);
     }
   },
 
