@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { makeRedirectUri } from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 
@@ -60,32 +61,54 @@ export function useAuth() {
     return data;
   }
 
-  async function signInWithGoogle() {
+  async function signInWithOAuthProvider(provider: 'google' | 'apple') {
     const redirectTo =
       Platform.OS === 'web'
         ? window.location.origin
         : makeRedirectUri({ scheme: 'moviematcher' });
 
     const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo },
+      provider,
+      options: {
+        redirectTo,
+        skipBrowserRedirect: Platform.OS !== 'web',
+      },
     });
     if (error) throw error;
+
+    // On native, open the OAuth URL in an in-app browser
+    if (Platform.OS !== 'web' && data.url) {
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectTo
+      );
+      if (result.type === 'success' && result.url) {
+        // Extract tokens from the redirect URL and set the session
+        const url = new URL(result.url);
+        // Supabase puts tokens in the hash fragment for implicit flow
+        const params = new URLSearchParams(
+          url.hash ? url.hash.substring(1) : url.search.substring(1)
+        );
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        if (accessToken && refreshToken) {
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+        }
+      }
+    }
+
     return data;
   }
 
-  async function signInWithApple() {
-    const redirectTo =
-      Platform.OS === 'web'
-        ? window.location.origin
-        : makeRedirectUri({ scheme: 'moviematcher' });
+  async function signInWithGoogle() {
+    return signInWithOAuthProvider('google');
+  }
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-      options: { redirectTo },
-    });
-    if (error) throw error;
-    return data;
+  async function signInWithApple() {
+    return signInWithOAuthProvider('apple');
   }
 
   async function signOut() {

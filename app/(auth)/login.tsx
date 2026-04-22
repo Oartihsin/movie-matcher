@@ -58,8 +58,8 @@ export default function LoginScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.emoji}>🎬</Text>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to Movie Matcher</Text>
+        <Text style={styles.title}>Movie Matcher</Text>
+        <Text style={styles.subtitle}>Sign in to continue</Text>
       </View>
 
       <View style={styles.form}>
