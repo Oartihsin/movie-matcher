@@ -361,7 +361,7 @@ export default function HomeSwipeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
   },
   header: {
     flexDirection: 'row',
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 56 : 12,
     paddingBottom: 8,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#292524',
   },
   headerTitle: {
     color: '#fff',
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   langBadge: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -471,12 +471,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   genreChip: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   genreText: {
     color: 'rgba(255,255,255,0.85)',
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   overview: {
-    color: '#c0c0d0',
+    color: '#a8a29e',
     fontSize: 15,
     lineHeight: 23,
   },
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     gap: 48,
     paddingBottom: Platform.OS === 'ios' ? 36 : 24,
     paddingTop: 12,
-    backgroundColor: 'rgba(22,33,62,0.95)',
+    backgroundColor: 'rgba(28,25,23,0.95)',
   },
   actionButton: {
     width: 60,
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   loadingText: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     marginTop: 16,
     fontSize: 16,
     textAlign: 'center',
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#a0a0b0',
+    color: '#a8a29e',
     textAlign: 'center',
     paddingHorizontal: 24,
     marginBottom: 24,
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e94560',
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 30,
+    borderRadius: 16,
   },
   retryButtonText: {
     color: '#fff',
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     bottom: 110,
     left: 24,
     right: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 12,

@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   // ── Layout (mirrors profile.tsx) ──────────────────────────────────────────
   container: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
   },
   scroll: {
     flex: 1,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
 
   // ── Section label (identical to profile.tsx) ──────────────────────────────
   sectionLabel: {
-    color: '#666',
+    color: '#78716c',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
@@ -325,18 +325,18 @@ const styles = StyleSheet.create({
 
   // ── Card (identical to profile.tsx) ───────────────────────────────────────
   card: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#292524',
     marginHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
   },
 
   // ── Divider (identical to profile.tsx) ────────────────────────────────────
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     marginLeft: 16,
   },
 
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#0f1228',
+    backgroundColor: '#1f1e1b',
     color: '#fff',
     fontSize: 16,
     paddingVertical: 12,
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   hintText: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 14,
     lineHeight: 20,
     flex: 1,
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   connectionUsername: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 13,
     marginTop: 2,
   },
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   pendingBadgeText: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
 
   // ── Empty / loading / error states ────────────────────────────────────────
   emptyText: {
-    color: '#666',
+    color: '#78716c',
     fontSize: 14,
     lineHeight: 21,
     flex: 1,

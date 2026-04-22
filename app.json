@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#16213e"
+      "backgroundColor": "#1c1917"
     },
     "ios": {
       "supportsTablet": false,
@@ -18,14 +18,15 @@
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Movie Matcher needs camera access for your profile photo.",
-        "NSPhotoLibraryUsageDescription": "Movie Matcher needs photo library access for your profile photo."
+        "NSPhotoLibraryUsageDescription": "Movie Matcher needs photo library access for your profile photo.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.moviematcher.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#16213e",
+        "backgroundColor": "#1c1917",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -44,6 +45,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c6feab19-7243-4b3c-9dda-7eaf3cf88c6c"
+      }
+    },
+    "owner": "oartihsins-organization"
   }
 }

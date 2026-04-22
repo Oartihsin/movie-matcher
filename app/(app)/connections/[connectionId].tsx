@@ -146,20 +146,20 @@ export default function ConnectionMatchesScreen() {
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
     justifyContent: 'center',
     alignItems: 'center',
   },
   scroll: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
   },
   content: {
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 16 : 20,
   },
   headerText: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 24,
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   emptySubtitle: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 15,
     textAlign: 'center',
     lineHeight: 22,
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 2 / 3,
     borderRadius: 12,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#292524',
   },
   posterPlaceholder: {
     justifyContent: 'center',
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   movieYear: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 12,
   },
   movieRating: {

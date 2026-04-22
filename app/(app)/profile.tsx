@@ -378,7 +378,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
   },
   scroll: {
     flex: 1,
@@ -425,12 +425,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   heroUsername: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 15,
     fontWeight: '500',
   },
   badgeDot: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 15,
   },
   verifiedBadge: {
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
 
   // Section label (iOS Settings style)
   sectionLabel: {
-    color: '#666',
+    color: '#78716c',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
@@ -452,11 +452,11 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#292524',
     marginHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
   },
 
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   settingsRowValue: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 15,
     maxWidth: 160,
     textAlign: 'right',
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   chevron: {
-    color: '#666',
+    color: '#78716c',
     fontSize: 14,
     marginLeft: 2,
   },
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
 
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     marginLeft: 16,
   },
 
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   input: {
-    backgroundColor: '#0f1228',
+    backgroundColor: '#1f1e1b',
     color: '#fff',
     fontSize: 16,
     paddingVertical: 12,
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   chipSelected: {
     backgroundColor: 'rgba(233,69,96,0.25)',
@@ -571,14 +571,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: Platform.OS === 'ios' ? 32 : 20,
     paddingTop: 12,
-    backgroundColor: 'rgba(22,33,62,0.95)',
+    backgroundColor: 'rgba(28,25,23,0.95)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
   saveButton: {
     backgroundColor: '#e94560',
     paddingVertical: 16,
-    borderRadius: 30,
+    borderRadius: 16,
     alignItems: 'center',
   },
   saveButtonText: {

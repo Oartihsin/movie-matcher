@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     height: CARD_HEIGHT,
     borderRadius: 20,
     alignSelf: 'center',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#292524',
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }
       : {

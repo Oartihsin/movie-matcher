@@ -95,14 +95,14 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   card: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#292524',
     borderRadius: 24,
     padding: 32,
     width: '100%',
     maxWidth: 340,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   emoji: {
     fontSize: 48,
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    color: '#a0a0b0',
+    color: '#a8a29e',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 20,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   skipText: {
-    color: '#666',
+    color: '#78716c',
     fontSize: 14,
   },
 });

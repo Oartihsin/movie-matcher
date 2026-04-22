@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: 20,
-    backgroundColor: '#1e2745',
+    backgroundColor: '#292524',
     alignSelf: 'center',
     overflow: 'hidden',
   },
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   block: {
-    backgroundColor: '#1e2745',
+    backgroundColor: '#292524',
     borderRadius: 6,
     overflow: 'hidden',
   },

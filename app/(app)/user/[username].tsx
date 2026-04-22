@@ -199,14 +199,14 @@ export default function PublicProfileScreen() {
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
   },
   container: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
     padding: 24,
     paddingTop: Platform.OS === 'ios' ? 24 : 16,
   },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   username: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionLabel: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 10,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e94560',
     paddingHorizontal: 48,
     paddingVertical: 16,
-    borderRadius: 30,
+    borderRadius: 16,
   },
   connectButtonText: {
     color: '#fff',
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4ecdc4',
     paddingHorizontal: 48,
     paddingVertical: 16,
-    borderRadius: 30,
+    borderRadius: 16,
   },
   acceptButtonText: {
     color: '#fff',
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(78,205,196,0.15)',
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 30,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#4ecdc4',
   },
@@ -309,10 +309,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 30,
+    borderRadius: 16,
   },
   pendingText: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -330,10 +330,10 @@ const styles = StyleSheet.create({
   },
   editButton: {
     alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 30,
+    borderRadius: 16,
     marginTop: 16,
   },
   editButtonText: {
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e94560',
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 30,
+    borderRadius: 16,
   },
   backButtonText: {
     color: '#fff',

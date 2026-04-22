@@ -80,7 +80,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   webOuter: {
     flex: 1,
-    backgroundColor: '#0d1117',
+    backgroundColor: '#0c0a09',
     alignItems: 'center',
   },
   webInner: {

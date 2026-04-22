@@ -174,7 +174,7 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
     justifyContent: 'center',
     padding: 24,
   },
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#a0a0b0',
+    color: '#a8a29e',
   },
   form: {
     width: '100%',
@@ -203,19 +203,19 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   input: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#292524',
     color: '#fff',
     fontSize: 16,
     paddingVertical: 14,
     paddingHorizontal: 18,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   primaryButton: {
     backgroundColor: '#e94560',
     paddingVertical: 16,
-    borderRadius: 30,
+    borderRadius: 16,
     alignItems: 'center',
     marginTop: 4,
   },
@@ -235,20 +235,20 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   dividerText: {
-    color: '#666',
+    color: '#78716c',
     marginHorizontal: 16,
     fontSize: 14,
   },
   socialButton: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#292524',
     paddingVertical: 14,
-    borderRadius: 30,
+    borderRadius: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   socialButtonText: {
     color: '#fff',
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   linkText: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 15,
   },
   linkBold: {
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   confirmHint: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 15,
     textAlign: 'center',
     lineHeight: 23,

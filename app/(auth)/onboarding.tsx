@@ -363,13 +363,13 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
     justifyContent: 'center',
     padding: 24,
   },
   scrollContainer: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1c1917',
   },
   scrollContent: {
     padding: 24,
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   stepSubtitle: {
     fontSize: 15,
-    color: '#a0a0b0',
+    color: '#a8a29e',
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -405,14 +405,14 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   input: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#292524',
     color: '#fff',
     fontSize: 16,
     paddingVertical: 14,
     paddingHorizontal: 18,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   otpInput: {
     fontSize: 28,
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: '#e94560',
     paddingVertical: 16,
-    borderRadius: 30,
+    borderRadius: 16,
     alignItems: 'center',
     marginTop: 4,
   },
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   linkText: {
-    color: '#a0a0b0',
+    color: '#a8a29e',
     fontSize: 14,
   },
   error: {
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   chipSelected: {
     backgroundColor: 'rgba(233,69,96,0.25)',
